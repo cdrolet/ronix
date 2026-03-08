@@ -60,10 +60,7 @@
         map (e: "${e.id};${chromeWebStoreUrl}") extensions;
     });
 
-  # Bookmarks
   bookmarksLib = import ../../lib/bookmarks.nix {inherit lib pkgs;};
-  userBookmarks = (config.user.workspace or {}).bookmarks or [];
-  bookmarksFile = bookmarksLib.mkChromiumBookmarksFile userBookmarks;
 
   braveProfileDir =
     if isDarwin
@@ -102,11 +99,17 @@ in
     })
 
     # All platforms: seed bookmarks on activation
-    (lib.optionalAttrs (isHomeManager && userBookmarks != []) {
-      home.activation.braveBookmarks = lib.hm.dag.entryAfter ["writeBoundary"] ''
-        braveDir="${braveProfileDir}"
-        $DRY_RUN_CMD mkdir -p "$braveDir"
-        $DRY_RUN_CMD cp --no-preserve=mode ${bookmarksFile} "$braveDir/Bookmarks"
-      '';
+    # Access config.user.workspace inside the DAG entry value (lazy), not in the
+    # top-level let block (eager), to avoid infinite recursion during module evaluation.
+    (lib.mkIf isHomeManager {
+      home.activation.braveBookmarks = lib.hm.dag.entryAfter ["writeBoundary"] (let
+        userBookmarks = (config.user.workspace or {}).bookmarks or [];
+        bookmarksFile = bookmarksLib.mkChromiumBookmarksFile userBookmarks;
+      in
+        lib.optionalString (userBookmarks != []) ''
+          braveDir="${braveProfileDir}"
+          $DRY_RUN_CMD mkdir -p "$braveDir"
+          $DRY_RUN_CMD cp --no-preserve=mode ${bookmarksFile} "$braveDir/Bookmarks"
+        '');
     })
   ]

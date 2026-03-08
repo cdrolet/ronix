@@ -17,18 +17,15 @@
   ...
 }: let
   isLinux = configContext != "darwin-system" && !(lib.hasSuffix "darwin" system);
-  bookmarks = (config.user.workspace or {}).bookmarks or [];
 in
   lib.mkMerge [
     (lib.optionalAttrs (configContext != "darwin-system") {
       programs.librewolf = {
         enable = true;
         profiles.default = {
-          bookmarks.settings = bookmarks;
-          extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
-            darkreader
-            bitwarden
-          ];
+          # Access config.user.workspace inside the option value (lazy), not in the
+          # top-level let block (eager), to avoid infinite recursion during module evaluation.
+          bookmarks.settings = (config.user.workspace or {}).bookmarks or [];
         };
       };
     })

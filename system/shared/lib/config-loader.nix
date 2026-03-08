@@ -31,14 +31,15 @@
   getAllSystems = let
     systemsPath = repoRoot + "/system";
     entries = builtins.readDir systemsPath;
-    # Filter to only directories with host subdirectories (actual systems)
+    # Filter to platform directories (have a lib/ subdir; excludes shared/)
+    # Note: host/ is not used — hosts live in the nix config flake (Feature 048)
     systems =
       lib.filterAttrs (
         name: type:
           type
           == "directory"
           && name != "shared"
-          && builtins.pathExists (systemsPath + "/${name}/host")
+          && builtins.pathExists (systemsPath + "/${name}/lib")
       )
       entries;
   in

@@ -28,6 +28,8 @@ in
           bookmarks.settings = (config.user.workspace or {}).bookmarks or [];
         };
       };
+
+      stylix.targets.librewolf.profileNames = [ "default" ];
     })
 
     (lib.optionalAttrs isLinux {

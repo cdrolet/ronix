@@ -1,6 +1,12 @@
-# nix-config Development Guidelines
+# ronix Development Guidelines
 
 Project guidelines for working with this Nix configuration repository.
+
+## Repo Identity
+
+- **Framework repo**: `ronix` (`~/project/ronix`) — user/host agnostic, public library
+- **Private config repo**: `usst` (`~/project/usst`, symlinked from `~/.config/nix-private`) — user/host data only
+- **GitHub**: `github:cdrolet/ronix` (framework), private repo for usst
 
 ## Terminology
 

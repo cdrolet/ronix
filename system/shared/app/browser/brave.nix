@@ -54,7 +54,7 @@
   # Darwin policy JSON: combines extraOpts + ExtensionInstallForcelist
   # Policy files are read-only by Brave, so home.file symlinks are safe here.
   chromeWebStoreUrl = "https://clients2.google.com/service/update2/crx";
-  darwinPolicyJson = builtins.toJSON (extraOpts
+  policyJson = builtins.toJSON (extraOpts
     // {
       ExtensionInstallForcelist =
         map (e: "${e.id};${chromeWebStoreUrl}") extensions;
@@ -73,14 +73,18 @@ in
       homebrew.casks = ["brave-browser"];
     })
 
-    # Linux: install + extensions + policies + commandLineArgs via programs.chromium
+    # Linux: install + extensions + commandLineArgs via programs.chromium
     (lib.optionalAttrs isLinux {
       programs.chromium = {
         enable = true;
         package = pkgs.brave;
         inherit extensions commandLineArgs;
-        extraOpts = extraOpts;
       };
+
+      # Linux policies via user-level managed policy file
+      # (programs.chromium.extraOpts only exists at NixOS system level)
+      xdg.configFile."BraveSoftware/Brave-Browser/policies/managed/brave.json".text =
+        policyJson;
 
       xdg.mimeApps.defaultApplications = {
         "text/html" = "brave-browser.desktop";
@@ -95,7 +99,7 @@ in
     # commandLineArgs are not applicable (Homebrew binary, nix cannot wrap it)
     (lib.optionalAttrs (isHomeManager && isDarwin) {
       home.file."Library/Application Support/BraveSoftware/Brave-Browser/policies/managed/brave.json".text =
-        darwinPolicyJson;
+        policyJson;
     })
 
     # All platforms: seed bookmarks on activation

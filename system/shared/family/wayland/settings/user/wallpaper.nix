@@ -19,7 +19,7 @@
   config,
   lib,
   pkgs,
-  # Feature 047: userDataRoot = privateConfigRoot/users (mandatory)
+  # Feature 047: userDataRoot = nixConfigRoot/users (mandatory)
   userDataRoot,
   ...
 }: let
@@ -27,8 +27,8 @@
   wpCfg = styleCfg.wallpaper or null;
   hasWallpaper = wpCfg != null;
 
-  # Check if the user has a wallpapers/ folder in the private config repo.
-  # Feature 047: userDataRoot = privateConfigRoot/users (mandatory)
+  # Check if the user has a wallpapers/ folder in the nix config flake.
+  # Feature 047: userDataRoot = nixConfigRoot/users (mandatory)
   userName = config.user.name;
   wallpapersInRepo = "${toString userDataRoot}/${userName}/wallpapers";
   hasCycling = builtins.pathExists wallpapersInRepo;

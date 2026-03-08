@@ -18,7 +18,7 @@
   nixpkgs,
   validUsers,
   discoverHosts,
-  privateConfigRoot,
+  nixConfigRoot,
 }: let
   # Import discovery library
   discovery = import ../../system/shared/lib/discovery.nix {inherit lib;};
@@ -38,7 +38,7 @@
     else null;
 
   # Import shared configuration loader
-  configLoader = import ../../system/shared/lib/config-loader.nix {inherit lib discoverHosts inputs privateConfigRoot;};
+  configLoader = import ../../system/shared/lib/config-loader.nix {inherit lib discoverHosts inputs nixConfigRoot;};
 
   # Repository root for path construction
   repoRoot = configLoader.repoRoot;

@@ -21,7 +21,7 @@
   nixpkgs,
   validUsers,
   discoverHosts,
-  privateConfigRoot,
+  nixConfigRoot,
 }: let
   # Validate required inputs exist
   requiredInputs = ["nix-darwin" "home-manager" "nixpkgs"];
@@ -52,7 +52,7 @@
   );
 
   # Import shared configuration loader
-  configLoader = import ../../shared/lib/config-loader.nix {inherit lib discoverHosts inputs privateConfigRoot;};
+  configLoader = import ../../shared/lib/config-loader.nix {inherit lib discoverHosts inputs nixConfigRoot;};
 
   # Helper to create darwin config with user/host split
   mkDarwinConfig = {

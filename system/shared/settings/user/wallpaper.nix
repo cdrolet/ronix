@@ -16,7 +16,7 @@
   config,
   lib,
   pkgs,
-  # Feature 047: userDataRoot = privateConfigRoot/users (mandatory)
+  # Feature 047: userDataRoot = nixConfigRoot/users (mandatory)
   # Passed via extraSpecialArgs from home-manager.nix
   userDataRoot,
   ...
@@ -35,7 +35,7 @@
   hasScaleMode = hasWallpaper && wpCfg.scaleMode != null;
 
   # Repo wallpapers sync: copy wallpapers/ to ~/Pictures/wallpapers/
-  # Feature 047: userDataRoot = privateConfigRoot/users (mandatory)
+  # Feature 047: userDataRoot = nixConfigRoot/users (mandatory)
   wallpapersSrc = "${toString userDataRoot}/${config.user.name}/wallpapers";
   # Nix-store-addressable path for firstRepoWallpaper
   _userDirPath = userDataRoot;

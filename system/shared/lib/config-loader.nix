@@ -4,15 +4,15 @@
 # This module eliminates duplication across darwin.nix, nixos.nix, and home-manager.nix
 # by centralizing the common patterns for loading pure data configurations.
 #
-# Feature 047: user/host configs always come from privateConfigRoot (mandatory).
-# Structure: privateConfigRoot/users/<name>/default.nix
-#            privateConfigRoot/hosts/<system>/<name>/default.nix
+# Feature 047: user/host configs always come from nixConfigRoot (mandatory).
+# Structure: nixConfigRoot/users/<name>/default.nix
+#            nixConfigRoot/hosts/<system>/<name>/default.nix
 {
   lib,
   discoverHosts,
   inputs ? {},
-  # Private user/host config repo root (mandatory — Feature 047)
-  privateConfigRoot,
+  # Nix config flake root (mandatory — Feature 047)
+  nixConfigRoot,
 }: let
   # Import discovery system
   discovery = import ./discovery.nix {inherit lib;};
@@ -20,11 +20,11 @@
   # Repository root for path construction (always the framework repo)
   repoRoot = ../../..;
 
-  # Where user directories live: privateConfigRoot/users/<name>/
-  userDataRoot = privateConfigRoot + "/users";
+  # Where user directories live: nixConfigRoot/users/<name>/
+  userDataRoot = nixConfigRoot + "/users";
 
-  # Where host directories live: privateConfigRoot/hosts/<system>/<name>/
-  hostDataRoot = system: privateConfigRoot + "/hosts/${system}";
+  # Where host directories live: nixConfigRoot/hosts/<system>/<name>/
+  hostDataRoot = system: nixConfigRoot + "/hosts/${system}";
 
   # Platform-agnostic system discovery
   # Automatically discovers all systems by scanning system/ directory

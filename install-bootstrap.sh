@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
 
-# Remote installation script for nix-config (multi-platform)
+# Generic bootstrap installer for ronix-based configurations.
 #
-# URL=https://raw.githubusercontent.com/cdrolet/nix-config/main/install-remote.sh
+# URL=https://raw.githubusercontent.com/cdrolet/ronix/main/install-bootstrap.sh
 #
 # Usage:
-#   curl -H 'Cache-Control: no-cache' -sL $URL -o install.sh && bash install.sh <user> <host> [options]
+#   curl -sL $URL | bash -s -- <user> <host> --root-flake <url> [options]
 #
-# Options:
-#   init-disk              Partition and format disk using host's disko storage profile
-#   github-repo            Override repository (default: github:cdrolet/nix-config)
-#   --private-repo <url>   Clone private user/host config repo to ~/.config/nix-private
+# Arguments:
+#   <user>              Username to install (e.g. cdrokar)
+#   <host>              Host name to install (e.g. avf-gnome)
+#   --root-flake <url>  Git URL of the nix config flake (required)
+#                       SSH:   git@github.com:you/private-config.git  (needs SSH keys)
+#                       HTTPS: https://TOKEN@github.com/you/private-config.git  (fresh machine)
+#   init-disk           Partition and format disk using host's disko storage profile
+#
+# The root flake is the nix config flake (e.g. private-config) that calls ronix.lib.mkOutputs.
+# It is cloned to ~/.config/nix-config (canonical location).
+# ronix itself is NOT cloned — Nix fetches it automatically via flake inputs.
 #
 # Examples:
-#   curl -H 'Cache-Control: no-cache' -sL https://raw.githubusercontent.com/cdrolet/nix-config/main/install-remote.sh -o install.sh && bash install.sh cdrokar home-macmini-m4
-#   curl -H 'Cache-Control: no-cache' -sL https://raw.githubusercontent.com/cdrolet/nix-config/main/install-remote.sh -o install.sh && bash install.sh cdrokar avf-gnome init-disk
+#   # Fresh machine — GitHub PAT embedded in URL:
+#   bash install-bootstrap.sh cdrokar avf-gnome --root-flake https://ghp_xxx@github.com/you/private-config.git init-disk
+#   # Existing machine with SSH keys:
+#   bash install-bootstrap.sh cdrokar home-macmini-m4 --root-flake git@github.com:you/private-config.git
 
 set -e
 
@@ -25,17 +34,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-echo_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+echo_info()  { echo -e "${GREEN}[INFO]${NC} $1"; }
+echo_warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 echo_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-echo_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+echo_step()  { echo -e "${BLUE}[STEP]${NC} $1"; }
 
-# Parse arguments
+# ── Parse arguments ───────────────────────────────────────────────────
 USER="${1:-}"
 HOST="${2:-}"
+ROOT_FLAKE=""
 INIT_DISK=false
-GITHUB_REPO="github:cdrolet/nix-config"
-PRIVATE_REPO=""
 
 args=("${@:3}")
 i=0
@@ -43,51 +51,49 @@ while [ $i -lt ${#args[@]} ]; do
   arg="${args[$i]}"
   if [[ $arg == "init-disk" ]]; then
     INIT_DISK=true
-  elif [[ $arg == github:* ]] || [[ $arg == http* ]]; then
-    GITHUB_REPO="$arg"
-  elif [[ $arg == "--private-repo" ]]; then
+  elif [[ $arg == "--root-flake" ]]; then
     i=$((i+1))
-    PRIVATE_REPO="${args[$i]:-}"
+    ROOT_FLAKE="${args[$i]:-}"
   fi
   i=$((i+1))
 done
 
 if [[ -z $USER ]] || [[ -z $HOST ]]; then
-  echo_error "Usage: $0 <user> <host> [init-disk] [github-repo]"
+  echo_error "Usage: $0 <user> <host> --root-flake <git-url> [init-disk]"
   echo ""
-  echo "  init-disk    Partition/format disk using host's disko storage profile"
-  echo ""
-  echo "Examples:"
-  echo "  $0 cdrokar home-macmini-m4"
-  echo "  $0 cdrokar avf-gnome init-disk"
-  echo ""
-  echo "Hosts: Darwin (home-macmini-m4, work) | NixOS (avf-gnome, qemu-niri)"
+  echo "  --root-flake <url>  Git URL of the nix config flake (required)"
+  echo "  init-disk           Partition/format disk using host's disko storage profile"
   exit 1
 fi
 
-echo_info "Installing nix-config: $USER@$HOST (repo: $GITHUB_REPO, init-disk: $INIT_DISK)"
+if [[ -z $ROOT_FLAKE ]]; then
+  echo_error "--root-flake <url> is required (the nix config flake, e.g. git@github.com:you/private-config.git)"
+  exit 1
+fi
+
+echo_info "Installing: $USER@$HOST (root-flake: $ROOT_FLAKE, init-disk: $INIT_DISK)"
 echo ""
 
-# ── Detect platform ──────────────────────────────────────────────────
+# ── Detect platform ───────────────────────────────────────────────────
 OS="$(uname -s)"
 case "$OS" in
-Darwin) PLATFORM="darwin" ;;
-Linux)
-  if [[ -f /etc/NIXOS ]]; then
-    PLATFORM="nixos"
-  else
-    echo_error "Unsupported Linux distribution. Only NixOS and macOS are supported."
+  Darwin) PLATFORM="darwin" ;;
+  Linux)
+    if [[ -f /etc/NIXOS ]]; then
+      PLATFORM="nixos"
+    else
+      echo_error "Unsupported Linux distribution. Only NixOS and macOS are supported."
+      exit 1
+    fi
+    ;;
+  *)
+    echo_error "Unsupported OS: $OS"
     exit 1
-  fi
-  ;;
-*)
-  echo_error "Unsupported OS: $OS"
-  exit 1
-  ;;
+    ;;
 esac
 echo_info "Detected platform: $PLATFORM"
 
-# ── Install Nix ──────────────────────────────────────────────────────
+# ── Install Nix ───────────────────────────────────────────────────────
 if command -v nix &>/dev/null; then
   echo_info "Nix already installed: $(nix --version)"
 else
@@ -105,7 +111,7 @@ fi
 
 export NIX_CONFIG="experimental-features = nix-command flakes"
 
-# ── Install Homebrew (Darwin only) ───────────────────────────────────
+# ── Install Homebrew (Darwin only) ────────────────────────────────────
 if [[ $PLATFORM == "darwin" ]]; then
   if command -v brew &>/dev/null; then
     echo_info "Homebrew already installed: $(brew --version | head -1)"
@@ -120,24 +126,9 @@ if [[ $PLATFORM == "darwin" ]]; then
   fi
 fi
 
-# ── Clone repository ─────────────────────────────────────────────────
-echo_step "Cloning repository..."
-CONFIG_DIR="$HOME/.config/nix-config"
-
-if [[ -d $CONFIG_DIR ]]; then
-  echo_warn "$CONFIG_DIR exists. Removing for fresh clone..."
-  rm -rf "$CONFIG_DIR"
-fi
-
-if [[ $GITHUB_REPO == github:* ]]; then
-  REPO_URL="https://github.com/${GITHUB_REPO#github:}.git"
-else
-  REPO_URL="$GITHUB_REPO"
-fi
-
+# ── Resolve git command ───────────────────────────────────────────────
 GIT_CMD=""
 if [[ $PLATFORM == "darwin" ]] && ! xcode-select -p &>/dev/null; then
-  # macOS without Xcode tools: /usr/bin/git is a shim that triggers an install popup
   echo_info "Xcode tools not installed, using nix to provide git..."
   GIT_CMD="nix run nixpkgs#git --"
 elif ! git --version &>/dev/null; then
@@ -147,27 +138,20 @@ else
   GIT_CMD="git"
 fi
 
-$GIT_CMD clone "$REPO_URL" "$CONFIG_DIR"
+# ── Clone root flake (nix config flake) ───────────────────────────
+echo_step "Cloning root flake (nix config flake)..."
+NIX_CONFIG_DIR="$HOME/.config/nix-config"
 
-cd "$CONFIG_DIR"
-echo_info "Repository ready: $CONFIG_DIR"
-
-# ── Clone private config repo (Feature 047 — mandatory) ─────────────
-PRIVATE_CONFIG_DIR="$HOME/.config/nix-private"
-if [[ -z $PRIVATE_REPO ]]; then
-  echo_error "--private-repo <url> is required (private config repo is mandatory)"
-  exit 1
+if [[ -d $NIX_CONFIG_DIR ]]; then
+  echo_warn "$NIX_CONFIG_DIR exists. Removing for fresh clone..."
+  rm -rf "$NIX_CONFIG_DIR"
 fi
-echo_step "Cloning private config repo..."
-if [[ -d $PRIVATE_CONFIG_DIR ]]; then
-  echo_warn "$PRIVATE_CONFIG_DIR exists. Removing for fresh clone..."
-  rm -rf "$PRIVATE_CONFIG_DIR"
-fi
-$GIT_CMD clone "$PRIVATE_REPO" "$PRIVATE_CONFIG_DIR"
-echo_info "Private config ready: $PRIVATE_CONFIG_DIR"
 
-# ── Age key prompt ──────────────────────────────────────────────────
-USER_SECRETS_FILE="$PRIVATE_CONFIG_DIR/users/$USER/secrets.age"
+$GIT_CMD clone "$ROOT_FLAKE" "$NIX_CONFIG_DIR"
+echo_info "Root flake ready: $NIX_CONFIG_DIR"
+
+# ── Age key prompt ────────────────────────────────────────────────────
+USER_SECRETS_FILE="$NIX_CONFIG_DIR/users/$USER/secrets.age"
 AGENIX_KEY_PATH="$HOME/.config/agenix/key.txt"
 
 if [[ -f $USER_SECRETS_FILE ]] && [[ ! -f $AGENIX_KEY_PATH ]]; then
@@ -206,9 +190,9 @@ if [[ -f $USER_SECRETS_FILE ]] && [[ ! -f $AGENIX_KEY_PATH ]]; then
   fi
 fi
 
-# ── Disko disk initialization ───────────────────────────────────────
+# ── Disko disk initialization ─────────────────────────────────────────
 run_disko() {
-  local attr="$CONFIG_DIR#nixosConfigurations.$USER-$HOST.config.system.build.diskoScriptNoDeps"
+  local attr="path:$NIX_CONFIG_DIR#nixosConfigurations.$USER-$HOST.config.system.build.diskoScriptNoDeps"
   echo_info "Building disko script..."
   local script
   script=$(nix build --extra-experimental-features "nix-command flakes" \
@@ -216,7 +200,6 @@ run_disko() {
     echo_error "Failed to build disko script"
     exit 1
   }
-  # nix build --print-out-paths may output multiple lines; take the last one
   script=$(echo "$script" | tail -n1)
   echo_info "Running disko: $script"
   if ! sudo "$script"; then
@@ -228,13 +211,9 @@ run_disko() {
 if [[ $INIT_DISK == "true" ]]; then
   echo_step "Initializing disk using disko..."
 
-  # Auto-detect disk device
   DISK_DEVICE=""
   for dev in /dev/vda /dev/sda /dev/nvme0n1; do
-    [[ -b $dev ]] && {
-      DISK_DEVICE="$dev"
-      break
-    }
+    [[ -b $dev ]] && { DISK_DEVICE="$dev"; break; }
   done
   if [[ -z $DISK_DEVICE ]]; then
     echo_error "No disk found (/dev/vda, /dev/sda, /dev/nvme0n1)"
@@ -262,42 +241,35 @@ if [[ $INIT_DISK == "true" ]]; then
   echo ""
 fi
 
-# ── Installation ─────────────────────────────────────────────────────
+# ── Installation ──────────────────────────────────────────────────────
 echo_step "Entering devShell..."
 
 cat >/tmp/install-inside-shell.sh <<'INSTALL_SCRIPT'
 #!/usr/bin/env bash
 set -e
 
-USER="$1"; HOST="$2"; PLATFORM="$3"; INIT_DISK="$4"; GITHUB_REPO="$5"; PRIVATE_REPO="${6:-}"
+USER="$1"; HOST="$2"; PLATFORM="$3"; INIT_DISK="$4"; ROOT_FLAKE="$5"
+NIX_CONFIG_DIR="$HOME/.config/nix-config"
 
-# Feature 047: private config is mandatory
-PRIVATE_CONFIG_DIR="$HOME/.config/nix-private"
-PRIVATE_OVERRIDE="--override-input user-host-config path:$PRIVATE_CONFIG_DIR"
-
-echo "===> Installing: $USER@$HOST ($PLATFORM, fresh=$INIT_DISK)"
+echo "===> Installing: $USER@$HOST ($PLATFORM, init-disk=$INIT_DISK)"
 
 if [[ "$INIT_DISK" == "true" ]] && [[ "$PLATFORM" == "nixos" ]]; then
-  # Fresh NixOS install
+  # Fresh NixOS install from ISO
   if ! mountpoint -q /mnt; then
     echo "ERROR: /mnt is not mounted. Did disko run correctly?"
     exit 1
   fi
 
   echo "===> Running nixos-install..."
-  sudo nixos-install --flake ".#$USER-$HOST" --no-root-passwd \
-    --option download-buffer-size 268435456 $PRIVATE_OVERRIDE
+  # RONIX_ROOT_IS_PRIVATE=1: nix config flake is the root flake, no --override-input needed
+  RONIX_ROOT_IS_PRIVATE=1 sudo nixos-install \
+    --flake "path:$NIX_CONFIG_DIR#$USER-$HOST" \
+    --no-root-passwd \
+    --option download-buffer-size 268435456
 
   # First-boot marker for automatic home-manager setup
-  if [[ "$GITHUB_REPO" == github:* ]]; then
-    REPO_GIT_URL="https://github.com/${GITHUB_REPO#github:}.git"
-  else
-    REPO_GIT_URL="$GITHUB_REPO"
-  fi
-
   sudo mkdir -p "/mnt/home/$USER"
-  # Write first-boot marker: user, host, repo URL, optional private repo URL
-  printf '%s\n' "$USER" "$HOST" "$REPO_GIT_URL" "${PRIVATE_REPO}" | sudo tee "/mnt/home/$USER/.nix-config-first-boot" > /dev/null
+  printf '%s\n' "$USER" "$HOST" "$ROOT_FLAKE" | sudo tee "/mnt/home/$USER/.nix-config-first-boot" > /dev/null
 
   # Copy agenix key if available
   AGENIX_KEY_PATH="$HOME/.config/agenix/key.txt"
@@ -320,7 +292,7 @@ if [[ "$INIT_DISK" == "true" ]] && [[ "$PLATFORM" == "nixos" ]]; then
   echo ""
   [[ $REPLY =~ ^[Nn]$ ]] && echo "Run 'sudo reboot' when ready." || sudo reboot
 else
-  # Update existing system
+  # Update or initial install on running system
   echo "===> Building..."
   just build "$USER" "$HOST" || { echo "ERROR: Build failed"; exit 1; }
   echo "===> Installing..."
@@ -328,13 +300,16 @@ else
 
   echo ""
   echo "===> Done! Restart terminal: exec \$SHELL"
-  echo "  Apply changes: just install $USER $HOST"
 fi
 INSTALL_SCRIPT
 
 chmod +x /tmp/install-inside-shell.sh
 
-if ! nix develop --command /tmp/install-inside-shell.sh "$USER" "$HOST" "$PLATFORM" "$INIT_DISK" "$GITHUB_REPO" "$PRIVATE_REPO"; then
+# Run inside the root flake's devShell (which inherits ronix's devShell via mkOutputs).
+# CWD = NIX_CONFIG_DIR so `just` finds private-config's justfile there.
+cd "$NIX_CONFIG_DIR"
+if ! RONIX_ROOT_IS_PRIVATE=1 nix develop . --command /tmp/install-inside-shell.sh \
+    "$USER" "$HOST" "$PLATFORM" "$INIT_DISK" "$ROOT_FLAKE"; then
   echo_error "Installation failed"
   rm -f /tmp/install-inside-shell.sh
   exit 1

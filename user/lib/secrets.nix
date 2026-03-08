@@ -23,8 +23,8 @@
 #   - 031: Per-User Secrets (each user has own keypair)
 #   - 047: Private config repo (secrets.age NOT committed to git, runtime search)
 #
-# Runtime path for secrets.age (Feature 047 — private repo mandatory):
-#   $HOME/.config/nix-private/users/<name>/secrets.age
+# Runtime path for secrets.age (Feature 047 — nix config flake mandatory):
+#   $HOME/.config/nix-config/users/<name>/secrets.age
 {
   lib,
   pkgs ? null,
@@ -135,16 +135,16 @@
   mkJqExtract = pkgs: jsonPath: "${pkgs.jq}/bin/jq -r 'getpath(\"${jsonPath}\" | split(\".\")) // empty'";
 
   # Shell snippet that locates secrets.age at runtime (Feature 047)
-  # Sets _secrets_file to the path (private repo layout — mandatory).
+  # Sets _secrets_file to the path (nix config flake layout — mandatory).
   mkFindSecretsSnippet = username: ''
-    _secrets_file="$HOME/.config/nix-private/users/${username}/secrets.age"
+    _secrets_file="$HOME/.config/nix-config/users/${username}/secrets.age"
   '';
 
   # Generate an activation script for resolving secrets
   # This creates a properly structured home.activation entry
   #
   # Uses direct rage decryption at runtime — no agenix required (Feature 047).
-  # Reads secrets.age from the private repo runtime location (Feature 047 — mandatory).
+  # Reads secrets.age from the nix config flake runtime location (Feature 047 — mandatory).
   #
   # Arguments:
   #   config: The full config object (used to access user.*)

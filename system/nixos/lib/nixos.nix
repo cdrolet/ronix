@@ -21,14 +21,14 @@
   nixpkgs,
   validUsers,
   discoverHosts,
-  privateConfigRoot,
+  nixConfigRoot,
 }: let
   # Validate required inputs exist
   requiredInputs = ["nixpkgs" "home-manager"];
   missingInputs = builtins.filter (name: !(inputs ? ${name})) requiredInputs;
 
   # Import shared configuration loader
-  configLoader = import ../../shared/lib/config-loader.nix {inherit lib discoverHosts inputs privateConfigRoot;};
+  configLoader = import ../../shared/lib/config-loader.nix {inherit lib discoverHosts inputs nixConfigRoot;};
 
   _ =
     if missingInputs != []

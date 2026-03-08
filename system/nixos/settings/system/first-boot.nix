@@ -5,25 +5,24 @@
 #
 # The service:
 #   1. Checks for a marker file indicating fresh install
-#   2. Clones the nix-config repository (and private config repo if URL on line 4)
+#   2. Clones the root flake (nix config flake) — ronix is fetched automatically by Nix
 #   3. Runs home-manager activation (age key must already exist)
 #   4. Removes the marker file
 #
-# Marker file format (4 lines):
+# Marker file format (3 lines, Feature 048 — inverted flake architecture):
 #   Line 1: USER_NAME
 #   Line 2: HOST_NAME
-#   Line 3: FRAMEWORK_REPO_URL
-#   Line 4: PRIVATE_REPO_URL (optional, Feature 047)
+#   Line 3: ROOT_FLAKE_URL  (nix config flake git URL)
 #
 # Systemd Ordering (Feature 040):
 # - before = ["display-manager.service"] blocks GDM from starting until activation completes
 # - This ensures password, dconf settings, and desktop files exist before first login
 # - Result: Everything works on first login (password, theme, apps)
 #
-# Feature 047: If line 4 contains a URL, the private config repo is cloned to
-# $HOME/.config/nix-private and --override-input is passed to nix build.
-# The age private key must be installed during system installation
-# (install-remote.sh prompts for it and copies it to the new system)
+# Feature 048: nix config flake is the root flake (calls ronix.lib.mkOutputs).
+# Only nix config flake is cloned to $HOME/.config/nix-config.
+# ronix is fetched automatically from the Nix store via nix config flake's flake inputs.
+# RONIX_ROOT_IS_PRIVATE=1 tells the build not to add --override-input.
 {
   config,
   lib,
@@ -50,8 +49,7 @@
       fi
 
       MARKER_FILE="$HOME/.nix-config-first-boot"
-      CONFIG_DIR="$HOME/.config/nix-config"
-      PRIVATE_CONFIG_DIR="$HOME/.config/nix-private"
+      NIX_CONFIG_DIR="$HOME/.config/nix-config"
 
       # Only run if marker file exists
       if [[ ! -f "$MARKER_FILE" ]]; then
@@ -62,45 +60,31 @@
       echo "==> First boot detected, setting up user environment..."
       echo "==> This is a one-time process that will take 2-5 minutes."
 
-      # Read user, host, repo URL, and optional private repo URL from marker file
+      # Read user, host, root flake URL from marker file (Feature 048: 3 lines)
       USER_NAME=$(${pkgs.coreutils}/bin/head -n1 "$MARKER_FILE")
       HOST_NAME=$(${pkgs.coreutils}/bin/head -n2 "$MARKER_FILE" | ${pkgs.coreutils}/bin/tail -n1)
-      REPO_URL=$(${pkgs.coreutils}/bin/head -n3 "$MARKER_FILE" | ${pkgs.coreutils}/bin/tail -n1)
-      PRIVATE_REPO_URL=$(${pkgs.coreutils}/bin/head -n4 "$MARKER_FILE" | ${pkgs.coreutils}/bin/tail -n1)
-      # Validate private repo URL is present (mandatory — Feature 047)
-      if [ "$PRIVATE_REPO_URL" = "$REPO_URL" ] || [ -z "$PRIVATE_REPO_URL" ]; then
-        echo "ERROR: Marker file missing private repo URL (line 4)"
+      ROOT_FLAKE_URL=$(${pkgs.coreutils}/bin/head -n3 "$MARKER_FILE" | ${pkgs.coreutils}/bin/tail -n1)
+      if [ -z "$ROOT_FLAKE_URL" ]; then
+        echo "ERROR: Marker file missing root flake URL (line 3)"
         exit 1
       fi
 
       echo "User: $USER_NAME"
       echo "Host: $HOST_NAME"
-      echo "Repo: $REPO_URL"
-      echo "Private repo: $PRIVATE_REPO_URL"
+      echo "Root flake: $ROOT_FLAKE_URL"
 
-      # Clone framework repository if not exists
-      if [[ ! -d "$CONFIG_DIR" ]]; then
-        echo "==> [1/5] Cloning nix-config repository..."
-        ${pkgs.git}/bin/git clone "$REPO_URL" "$CONFIG_DIR" || {
-          echo "ERROR: Failed to clone repository"
+      # Clone nix config flake (Feature 048)
+      # ronix is fetched automatically by Nix via nix config flake's flake inputs (no separate clone needed)
+      if [[ ! -d "$NIX_CONFIG_DIR" ]]; then
+        echo "==> [1/4] Cloning root flake (nix config flake)..."
+        ${pkgs.git}/bin/git clone "$ROOT_FLAKE_URL" "$NIX_CONFIG_DIR" || {
+          echo "ERROR: Failed to clone root flake"
           exit 1
         }
       fi
 
-      # Clone private config repo (mandatory — Feature 047)
-      if [[ ! -d "$PRIVATE_CONFIG_DIR" ]]; then
-        echo "==> [2/5] Cloning private config repository..."
-        ${pkgs.git}/bin/git clone "$PRIVATE_REPO_URL" "$PRIVATE_CONFIG_DIR" || {
-          echo "ERROR: Failed to clone private config repo"
-          exit 1
-        }
-      fi
-
-      # Build override arg (always set — private config is mandatory)
-      PRIVATE_OVERRIDE="--override-input user-host-config path:$PRIVATE_CONFIG_DIR"
-
-      cd "$CONFIG_DIR" || {
-        echo "ERROR: Failed to cd to $CONFIG_DIR"
+      cd "$NIX_CONFIG_DIR" || {
+        echo "ERROR: Failed to cd to $NIX_CONFIG_DIR"
         exit 1
       }
 
@@ -108,11 +92,11 @@
       ${pkgs.coreutils}/bin/mkdir -p "$HOME/.local/state/nix/profiles"
 
       # Run home-manager switch (standalone mode)
-      echo "==> [3/5] Building home-manager configuration..."
+      # RONIX_ROOT_IS_PRIVATE=1: nix config flake is the root flake, no --override-input needed
+      echo "==> [2/4] Building home-manager configuration..."
       export NIX_CONFIG="experimental-features = nix-command flakes"
 
-      # Build the activation package (with private config override if present)
-      ${pkgs.nix}/bin/nix build $PRIVATE_OVERRIDE \
+      RONIX_ROOT_IS_PRIVATE=1 ${pkgs.nix}/bin/nix build \
         ".#homeConfigurations.\"$USER_NAME@$HOST_NAME\".activationPackage" -o result || {
         echo "ERROR: Failed to build home-manager activation package"
         exit 1
@@ -125,7 +109,7 @@
       }
 
       # Run activation (backup existing files that would conflict)
-      echo "==> [4/5] Installing user applications..."
+      echo "==> [3/4] Installing user applications..."
       HOME_MANAGER_BACKUP_EXT=bak ./result/activate || {
         echo "ERROR: Failed to run activation script"
         exit 1
@@ -134,7 +118,7 @@
       # Set password from secrets (Feature 047: direct rage decryption)
       # home-manager also does this, but sudo may fail in a non-interactive service.
       AGENIX_KEY="$HOME/.config/agenix/key.txt"
-      SECRETS_FILE="$PRIVATE_CONFIG_DIR/users/$USER_NAME/secrets.age"
+      SECRETS_FILE="$NIX_CONFIG_DIR/users/$USER_NAME/secrets.age"
       if [ -f "$AGENIX_KEY" ] && [ -f "$SECRETS_FILE" ]; then
         PASSWORD_HASH=$(${pkgs.rage}/bin/rage -d -i "$AGENIX_KEY" "$SECRETS_FILE" 2>/dev/null \
           | ${pkgs.jq}/bin/jq -r '.security.password // empty')
@@ -154,7 +138,7 @@
         kill "$DBUS_SESSION_BUS_PID" 2>/dev/null || true
       fi
 
-      echo "==> [5/5] Activation complete!"
+      echo "==> [4/4] Activation complete!"
       echo "==> Setup complete! Starting login screen..."
     '';
   };

@@ -20,12 +20,15 @@
   # Generic function to discover directories containing default.nix
   # Type: discoverDirectoriesWithDefault :: Path → [String]
   # Returns: List of directory names that contain default.nix
-  discoverDirectoriesWithDefault = basePath: let
-    entries = builtins.readDir basePath;
-    dirs = lib.filterAttrs (name: type: type == "directory") entries;
-    hasDefault = name: builtins.pathExists (basePath + "/${name}/default.nix");
-  in
-    builtins.attrNames (lib.filterAttrs (name: _: hasDefault name) dirs);
+  discoverDirectoriesWithDefault = basePath:
+    if !builtins.pathExists basePath
+    then []
+    else let
+      entries = builtins.readDir basePath;
+      dirs = lib.filterAttrs (name: type: type == "directory") entries;
+      hasDefault = name: builtins.pathExists (basePath + "/${name}/default.nix");
+    in
+      builtins.attrNames (lib.filterAttrs (name: _: hasDefault name) dirs);
 
   # Discover users from directory structure
   # Type: discoverUsers :: → [String]
@@ -919,6 +922,7 @@ in {
   # Internal functions (discoverSystems, buildAppRegistry, detectContext,
   # buildSearchPaths, findAppInPath) are not exported
   inherit
+    discoverDirectoriesWithDefault
     discoverUsers
     discoverModules
     discoverModulesInContext

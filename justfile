@@ -1,30 +1,32 @@
 # Justfile for nix-config repository
 # Provides convenient commands for building and installing configurations
 
-# Feature 047: Private config repo (mandatory)
-# Set NIX_PRIVATE_CONFIG_DIR or place config at ~/.config/nix-private
-private_config_dir := env("NIX_PRIVATE_CONFIG_DIR", env("HOME") + "/.config/nix-private")
+# Feature 047: Nix config flake location (mandatory)
+# Set NIX_CONFIG_DIR or place config at ~/.config/nix-config
+nix_config_dir := env("NIX_CONFIG_DIR", env("HOME") + "/.config/nix-config")
 
-# --override-input flag always passed to nix build/install (private config mandatory)
-_private_override := "--override-input user-host-config path:" + private_config_dir
+# Feature 048: When running from the nix config flake (inverted arch), it IS the
+# root flake — no --override-input needed (it has no user-host-config input).
+# The nix config flake's justfile sets RONIX_ROOT_IS_PRIVATE=1 when delegating here.
+_config_override := if env("RONIX_ROOT_IS_PRIVATE", "") == "1" { "" } else { "--override-input user-host-config path:" + nix_config_dir }
 
 # Default recipe - show available commands
 default:
     @just --list
 
-# Discover users from private config repo
+# Discover users from nix config flake
 _discover-users:
     #!/usr/bin/env bash
-    for dir in "{{ private_config_dir }}/users"/*/; do
+    for dir in "{{ nix_config_dir }}/users"/*/; do
         if [ -d "$dir" ]; then
             basename "$dir"
         fi
     done | sort
 
-# Discover hosts for a specific system from private config repo
+# Discover hosts for a specific system from nix config flake
 _discover-hosts system:
     #!/usr/bin/env bash
-    for dir in "{{ private_config_dir }}/hosts/{{ system }}"/*/; do
+    for dir in "{{ nix_config_dir }}/hosts/{{ system }}"/*/; do
         if [ -d "$dir" ]; then
             basename "$dir"
         fi
@@ -40,17 +42,17 @@ _validate-user user:
         exit 1
     fi
 
-# Get user configuration directory (private config repo — Feature 047)
+# Get user configuration directory (nix config flake — Feature 047)
 _user-config-dir user:
-    @echo "{{ private_config_dir }}/users/{{ user }}"
+    @echo "{{ nix_config_dir }}/users/{{ user }}"
 
 # Validate system exists (discovered from filesystem)
 _validate-system system:
     #!/usr/bin/env bash
-    if [ ! -d "{{ private_config_dir }}/hosts/{{ system }}" ]; then
+    if [ ! -d "{{ nix_config_dir }}/hosts/{{ system }}" ]; then
         echo "Error: System '{{ system }}' not found"
         echo "Available systems:"
-        for dir in "{{ private_config_dir }}/hosts"/*/; do
+        for dir in "{{ nix_config_dir }}/hosts"/*/; do
             [ -d "$dir" ] && basename "$dir"
         done
         exit 1
@@ -105,7 +107,7 @@ _rebuild-command system command_type user host:
     if [ "{{ command_type }}" = "build" ]; then
         # Use system-agnostic nix build command
         output_path=$(just _flake-output-path {{ system }} {{ user }} {{ host }})
-        nix build ".#${output_path}" {{ _private_override }} --show-trace
+        nix build ".#${output_path}" {{ _config_override }} --show-trace
     else
         # Use activation script from build result
         if [ ! -L "result" ]; then
@@ -141,12 +143,12 @@ list-users:
     @echo "Valid users:"
     @just _discover-users
 
-# List all hosts organized by system (from private config repo)
+# List all hosts organized by system (from nix config flake)
 list-hosts:
     #!/usr/bin/env bash
     echo "Available hosts by system:"
     echo "=========================="
-    for system_dir in "{{ private_config_dir }}/hosts"/*/; do
+    for system_dir in "{{ nix_config_dir }}/hosts"/*/; do
         if [ -d "$system_dir" ]; then
             sys=$(basename "$system_dir")
             echo ""
@@ -165,7 +167,7 @@ list-combinations:
     echo "Available user-host combinations:"
     echo "=================================="
     users=$(just _discover-users)
-    for system_dir in "{{ private_config_dir }}/hosts"/*/; do
+    for system_dir in "{{ nix_config_dir }}/hosts"/*/; do
         if [ -d "$system_dir" ]; then
             sys=$(basename "$system_dir")
             for host_dir in "$system_dir"*/; do
@@ -201,11 +203,11 @@ fmt-check:
     @nix fmt -- --fail-on-change
     @echo "All files are properly formatted!"
 
-# Auto-detect system from host (searches private config repo)
+# Auto-detect system from host (searches nix config flake)
 # Returns: darwin, nixos, or error
 _auto-detect-system host:
     #!/usr/bin/env bash
-    for system_dir in "{{ private_config_dir }}/hosts"/*/; do
+    for system_dir in "{{ nix_config_dir }}/hosts"/*/; do
         if [ -d "${system_dir}{{ host }}" ]; then
             basename "$system_dir"
             exit 0
@@ -213,7 +215,7 @@ _auto-detect-system host:
     done
     echo "Error: Host '{{ host }}' not found in any system" >&2
     echo "Available hosts:" >&2
-    for system_dir in "{{ private_config_dir }}/hosts"/*/; do
+    for system_dir in "{{ nix_config_dir }}/hosts"/*/; do
         sys=$(basename "$system_dir")
         for host_dir in "$system_dir"*/; do
             [ -d "$host_dir" ] && echo "  - $(basename "$host_dir") ($sys)" >&2
@@ -288,7 +290,7 @@ build user="" host="":
 
     # Feature 036: Build both system and user configurations
     # Nix options for large downloads
-    NIX_OPTS="{{ _private_override }}"
+    NIX_OPTS="{{ _config_override }}"
 
     # System build
     echo "===> Step 1/2: Building system configuration..."
@@ -305,7 +307,7 @@ build user="" host="":
 
     # Check for agenix private key before building
     AGENIX_KEY_PATH="$HOME/.config/agenix/key.txt"
-    USER_SECRETS_FILE="{{ private_config_dir }}/users/$USER/secrets.age"
+    USER_SECRETS_FILE="{{ nix_config_dir }}/users/$USER/secrets.age"
 
     if [ -f "$USER_SECRETS_FILE" ] && [ ! -f "$AGENIX_KEY_PATH" ]; then
         echo ""
@@ -367,7 +369,7 @@ install user="" host="":
 
     # Feature 036: Run both system and user activation
     # Nix options for large downloads
-    NIX_OPTS="{{ _private_override }}"
+    NIX_OPTS="{{ _config_override }}"
 
     # Install Homebrew if missing on darwin (required for cask apps)
     if [ "$system" = "darwin" ] && ! command -v brew &>/dev/null; then
@@ -425,7 +427,7 @@ install-home user="" host="":
     set -euo pipefail
 
     # Nix options for large downloads
-    NIX_OPTS="{{ _private_override }}"
+    NIX_OPTS="{{ _config_override }}"
 
     # Auto-detect user if not provided
     if [ -z "{{ user }}" ]; then
@@ -497,20 +499,20 @@ clean-cache:
     @rm -rf ~/.cache/nix/fetchers || true
     @echo "Cache cleanup complete!"
 
-# Clone or update the private config repo
+# Clone or update the nix config flake
 # Usage: just private-clone <git-url>
 # Example: just private-clone git@github.com:you/private-config
 private-clone url:
     #!/usr/bin/env bash
-    PRIVATE_DIR="{{ private_config_dir }}"
-    if [ -d "$PRIVATE_DIR" ]; then
-        echo "Updating private config repo at $PRIVATE_DIR..."
-        git -C "$PRIVATE_DIR" pull
+    NIX_CONFIG_DIR_LOCAL="{{ nix_config_dir }}"
+    if [ -d "$NIX_CONFIG_DIR_LOCAL" ]; then
+        echo "Updating nix config flake at $NIX_CONFIG_DIR_LOCAL..."
+        git -C "$NIX_CONFIG_DIR_LOCAL" pull
     else
-        echo "Cloning private config repo to $PRIVATE_DIR..."
-        git clone "{{ url }}" "$PRIVATE_DIR"
+        echo "Cloning nix config flake to $NIX_CONFIG_DIR_LOCAL..."
+        git clone "{{ url }}" "$NIX_CONFIG_DIR_LOCAL"
     fi
-    echo "Private config ready at $PRIVATE_DIR"
+    echo "Nix config flake ready at $NIX_CONFIG_DIR_LOCAL"
 
 # Fresh build - clean caches then build
 # Usage: just fresh-build [user] [host]
@@ -529,9 +531,9 @@ fresh-install user="" host="":
     set -euo pipefail
     echo "==> Pulling framework repo..."
     git pull
-    if [ -d "{{ private_config_dir }}" ]; then
-        echo "==> Pulling private config repo..."
-        git -C "{{ private_config_dir }}" pull
+    if [ -d "{{ nix_config_dir }}" ]; then
+        echo "==> Pulling nix config flake..."
+        git -C "{{ nix_config_dir }}" pull
     fi
     just clean-cache
     just install {{ user }} {{ host }}
@@ -577,7 +579,7 @@ diff user="" host="":
 
     # Feature 036: Show diffs for both system and user configurations
     # Nix options for large downloads
-    NIX_OPTS="{{ _private_override }}"
+    NIX_OPTS="{{ _config_override }}"
 
     # System diff
     echo "===> Step 1/2: System configuration diff..."
@@ -637,7 +639,7 @@ build-and-push user="" host="":
 
     # Step 1: Build the configuration (Feature 036: dual-mode)
     # Nix options for large downloads
-    NIX_OPTS="{{ _private_override }}"
+    NIX_OPTS="{{ _config_override }}"
 
     echo "Building configuration for $USER on $system with host $HOST..."
     echo ""
@@ -659,7 +661,7 @@ build-and-push user="" host="":
     echo "Build successful!"
 
     # Step 2: Check if user has Cachix write access configured
-    user_config="{{ private_config_dir }}/users/$USER/default.nix"
+    user_config="{{ nix_config_dir }}/users/$USER/default.nix"
 
     # Check if user config has security.cachixAuthToken set to "<secret>"
     if grep -q 'cachixAuthToken.*=.*"<secret>"' "$user_config" 2>/dev/null; then
@@ -723,8 +725,8 @@ user-create:
         exit 1
     fi
 
-    # Create user in private config repo (mandatory — Feature 047)
-    user_dir="{{ private_config_dir }}/users/$username"
+    # Create user in nix config flake (mandatory — Feature 047)
+    user_dir="{{ nix_config_dir }}/users/$username"
 
     # Check if user already exists
     if [ -d "$user_dir" ]; then
@@ -937,7 +939,7 @@ secrets-init-user user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Validate user exists (private config repo — Feature 047)
+    # Validate user exists (nix config flake — Feature 047)
     user_dir=$(just _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
@@ -998,7 +1000,7 @@ secrets-init-user user:
     echo "    export AGENIX_KEY=\$(cat $key_path)"
     echo ""
     echo "Next steps:"
-    echo "  1. Commit users/{{ user }}/public.age to the private repo"
+    echo "  1. Commit users/{{ user }}/public.age to the nix config flake"
     echo "  2. Distribute private key using one of the options above"
     echo "  3. Add secrets: just secrets-set {{ user }} <field> <value>"
 
@@ -1110,7 +1112,7 @@ secrets-rotate-user user:
     echo "    scp $key_path other-machine:~/.config/agenix/"
     echo ""
     echo "Next steps:"
-    echo "  1. Commit updated users/{{ user }}/public.age in the private repo"
+    echo "  1. Commit updated users/{{ user }}/public.age in the nix config flake"
     echo "  2. Distribute new private key to all machines"
     echo "  3. Test decryption: just secrets-list"
 
@@ -1155,7 +1157,7 @@ secrets-set user field value:
     fi
 
     secret_file="$user_dir/secrets.age"
-    config_file="{{ private_config_dir }}/users/{{ user }}/default.nix"
+    config_file="{{ nix_config_dir }}/users/{{ user }}/default.nix"
     pubkey=$(cat "$pub_path")
 
     # Auto-create empty secrets file if missing
@@ -1234,7 +1236,7 @@ deploy-key-create user target:
 
     # Store private key in secrets and commit
     just secrets-set {{ user }} security.sshKeys.{{ target }} "$(cat "$key_path")"
-    git -C "{{ private_config_dir }}" add users/{{ user }}/secrets.age
+    git -C "{{ nix_config_dir }}" add users/{{ user }}/secrets.age
     git commit -m "chore(secrets): update {{ user }} {{ target }} deploy key"
     echo ""
 
@@ -1254,7 +1256,7 @@ deploy-key-create user target:
     cat "$pub_path"
     echo "--- End ---"
     echo ""
-    echo "Make sure users/{{ user }}/default.nix (private repo) has:"
+    echo "Make sure users/{{ user }}/default.nix (nix config flake) has:"
     echo "  security.sshKeys.{{ target }} = \"<secret>\";"
     echo ""
 
@@ -1424,10 +1426,10 @@ secrets-list:
     fi
     echo ""
 
-    for user_dir_entry in "{{ private_config_dir }}/users"/*/; do
+    for user_dir_entry in "{{ nix_config_dir }}/users"/*/; do
         user=$(basename "$user_dir_entry")
 
-        user_config_dir="{{ private_config_dir }}/users/$user"
+        user_config_dir="{{ nix_config_dir }}/users/$user"
         pub_path="$user_config_dir/public.age"
         secret_path="$user_config_dir/secrets.age"
 

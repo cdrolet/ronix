@@ -39,8 +39,8 @@
     echo "=== $(date -Iseconds) Auto-update started ==="
 
     if [ ! -d "${configDir}" ]; then
-      echo "Error: nix-config not found at ${configDir}"
-      echo "Set NIX_CONFIG_DIR to override the default path."
+      echo "Error: root flake not found at ${configDir}"
+      echo "Expected nix config flake checkout at ~/.config/nix-config"
       exit 1
     fi
 

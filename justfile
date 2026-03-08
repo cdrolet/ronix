@@ -476,7 +476,7 @@ update:
 # Update a specific input
 update-input input:
     @echo "Updating {{ input }}..."
-    @nix flake lock --update-input {{ input }}
+    @nix flake update {{ input }}
     @echo "Update complete!"
 
 # Clean old generations and garbage collect

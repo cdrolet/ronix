@@ -1,0 +1,28 @@
+# Nix build results
+result
+result-*
+
+# direnv
+.direnv/
+.envrc.cache
+
+# macOS
+.DS_Store
+
+# Per-user private keys (Feature 031)
+user/**/key.txt
+user/**/key-*.txt
+key.txt
+key-*.txt
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+.claude/settings.local.json

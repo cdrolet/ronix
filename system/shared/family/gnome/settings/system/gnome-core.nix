@@ -69,6 +69,9 @@
   # Required for desktop integration and user experience
   services.gnome.gnome-keyring.enable = lib.mkDefault true;
 
+  # GNOME Shell extensions — user-theme required by Stylix for shell theming
+  environment.systemPackages = [ pkgs.gnome-shell-extensions ];
+
   # Exclude unwanted GNOME packages from default installation
   # Reduces system size and removes rarely-used applications
   environment.gnome.excludePackages = lib.mkDefault (with pkgs; [

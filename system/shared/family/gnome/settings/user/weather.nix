@@ -1,20 +1,17 @@
-# SimpleWeather - Weather in GNOME Shell top bar
+# GNOME Family: SimpleWeather Extension
 #
 # Purpose: Display current temperature and conditions in the top panel
-# Platform: GNOME desktop environments
-#
-# Shows weather for your current location (auto-detected via IP).
-# Temperature and speed units derived from user.locale.format when available.
-#
 # Extension: https://extensions.gnome.org/extension/8261/simpleweather/
+#
+# Shows weather for current location (auto-detected via IP).
+# Temperature and speed units derived from user.locale.format when available.
+# Extension UUID registered in extensions.nix.
 {
   config,
   pkgs,
   lib,
   ...
 }: let
-  extensionUuid = "simple-weather@romanlefler.com";
-
   localeCfg = config.user.locale or {};
   hasFormat = localeCfg ? format && localeCfg.format != null;
 
@@ -29,10 +26,6 @@ in {
   home.packages = [pkgs.gnomeExtensions.simpleweather];
 
   dconf.settings = {
-    "org/gnome/shell" = {
-      enabled-extensions = lib.mkDefault [extensionUuid];
-    };
-
     "org/gnome/shell/extensions/simple-weather" = lib.mkIf hasFormat (
       if isMetricRegion localeCfg.format
       then {

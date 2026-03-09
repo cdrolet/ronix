@@ -120,6 +120,23 @@
           example = "daily";
         };
 
+        display = lib.mkOption {
+          type = lib.types.submodule {
+            options.scale = lib.mkOption {
+              type = lib.types.nullOr lib.types.ints.positive;
+              default = null;
+              description = ''
+                Integer display scale factor (1 = 100%, 2 = 200%).
+                Applied via GNOME dconf scaling-factor when using the gnome family.
+                Use 2 for HiDPI monitors or high-resolution VM displays.
+              '';
+              example = 2;
+            };
+          };
+          default = {};
+          description = "Display configuration for this host.";
+        };
+
         virtualMachine = lib.mkOption {
           type = lib.types.bool;
           default = let

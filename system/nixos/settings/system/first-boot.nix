@@ -173,8 +173,8 @@
       Group = "users";
       ExecStart = "/etc/nix-config-first-boot.sh";
       RemainAfterExit = true;
-      StandardOutput = "journal";
-      StandardError = "journal";
+      StandardOutput = "journal+console";
+      StandardError = "journal+console";
       # Set PATH and HOME for the user
       Environment = [
         "PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/run/wrappers/bin:${pkgs.git}/bin:${pkgs.nix}/bin:${pkgs.coreutils}/bin"

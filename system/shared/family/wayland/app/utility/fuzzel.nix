@@ -10,7 +10,8 @@
   ...
 }: {
   # fuzzel requires wlr-layer-shell (wlroots compositors only — not GNOME/Mutter)
-  config = lib.optionalAttrs (options ? home && !builtins.elem "gnome" (config.host.family or [])) {
+  # Use lib.mkIf (lazy condition) not lib.optionalAttrs (eager) to avoid recursion
+  config = lib.mkIf (options ? home && !builtins.elem "gnome" (config.host.family or [])) {
     programs.fuzzel = {
       enable = true;
       settings = {

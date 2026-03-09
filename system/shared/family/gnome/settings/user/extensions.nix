@@ -20,6 +20,9 @@
         # Keyboard navigation between windows in Activities overview
         "windownavigator@gnome-shell-extensions.gcampax.github.com"
 
+        # Adjustable top bar transparency (opacity from user.style.theme.opacity.applications)
+        "transparent-top-bar@ftpix.com"
+
         # Weather in top panel (configured in settings/user/weather.nix)
         "simple-weather@romanlefler.com"
       ];

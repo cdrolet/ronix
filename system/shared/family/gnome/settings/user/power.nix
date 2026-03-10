@@ -22,49 +22,53 @@
     then "nothing"
     else "suspend";
 in {
-  dconf.settings = {
-    # ============================================================================
-    # Screen Timeout Settings
-    # ============================================================================
+  dconf.settings = lib.mkMerge [
+    {
+      # ============================================================================
+      # Screen Timeout Settings
+      # ============================================================================
 
-    "org/gnome/desktop/session" = {
-      # Idle delay before screen dims (seconds)
-      # 300 = 5 minutes
-      idle-delay = lib.mkDefault (lib.hm.gvariant.mkUint32 300);
-    };
+      "org/gnome/desktop/session" = {
+        # Idle delay before screen dims (seconds)
+        # 300 = 5 minutes
+        idle-delay = lib.mkDefault (lib.hm.gvariant.mkUint32 300);
+      };
 
-    # ============================================================================
-    # Power Management Settings
-    # ============================================================================
+      # ============================================================================
+      # Power Management Settings
+      # ============================================================================
 
-    "org/gnome/settings-daemon/plugins/power" = {
-      # Screen blank timeout on AC power (seconds)
-      # 1800 = 30 minutes
-      sleep-inactive-ac-timeout = lib.mkDefault 1800;
-      sleep-inactive-ac-type = lib.mkDefault sleepType;
+      "org/gnome/settings-daemon/plugins/power" = {
+        # Screen blank timeout on AC power (seconds)
+        # 1800 = 30 minutes
+        sleep-inactive-ac-timeout = lib.mkDefault 1800;
+        sleep-inactive-ac-type = lib.mkDefault sleepType;
 
-      # Screen blank timeout on battery (seconds)
-      # 900 = 15 minutes
-      sleep-inactive-battery-timeout = lib.mkDefault 900;
-      sleep-inactive-battery-type = lib.mkDefault sleepType;
+        # Screen blank timeout on battery (seconds)
+        # 900 = 15 minutes
+        sleep-inactive-battery-timeout = lib.mkDefault 900;
+        sleep-inactive-battery-type = lib.mkDefault sleepType;
 
-      # Dim screen when idle
-      idle-dim = lib.mkDefault true;
+        # Dim screen when idle
+        idle-dim = lib.mkDefault true;
 
-      # Power button action
-      power-button-action = lib.mkDefault "interactive";
-    };
+        # Power button action
+        power-button-action = lib.mkDefault "interactive";
+      };
+    }
 
     # ============================================================================
     # Lock Screen (disabled in VMs)
     # ============================================================================
 
-    "org/gnome/desktop/screensaver" = lib.mkIf isVM {
-      lock-enabled = false;
-    };
+    (lib.mkIf isVM {
+      "org/gnome/desktop/screensaver" = {
+        lock-enabled = false;
+      };
 
-    "org/gnome/desktop/lockdown" = lib.mkIf isVM {
-      disable-lock-screen = true;
-    };
-  };
+      "org/gnome/desktop/lockdown" = {
+        disable-lock-screen = true;
+      };
+    })
+  ];
 }

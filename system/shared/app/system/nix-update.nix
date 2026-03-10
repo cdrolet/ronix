@@ -24,6 +24,9 @@
     #!/usr/bin/env bash
     set -euo pipefail
 
+    # Always pause before closing so the user can read the output
+    trap 'echo ""; read -rp "Press Enter to close..." _' EXIT
+
     CONFIG_DIR="''${NIX_CONFIG_DIR:-${configDir}}"
 
     echo "======================================"
@@ -51,7 +54,7 @@
     fi
 
     cd "$CONFIG_DIR"
-    exec just fresh-install
+    just fresh-install
   '';
 in {
   # just is a runtime dependency: the script calls `just fresh-install`

@@ -10,11 +10,16 @@ nix_config_dir := env("NIX_CONFIG_DIR", env("HOME") + "/.config/nix-config")
 # The nix config flake's justfile sets RONIX_ROOT_IS_PRIVATE=1 when delegating here.
 _config_override := if env("RONIX_ROOT_IS_PRIVATE", "") == "1" { "" } else { "--override-input user-host-config path:" + nix_config_dir }
 
-# Canonical just invocation with the correct justfile (for nested calls in bash shebang recipes).
-# When this justfile is invoked via usst's `_fw` delegation (--working-directory=usst), nested
-# `just` calls would search the working directory and find usst/justfile instead of this file.
-# Using `{{ _self }} <recipe>` ensures private recipes (_auto-detect-user etc.) always resolve here.
-_self := just_executable() + " --justfile " + quote(justfile())
+# Canonical just invocation with the correct justfile AND working directory (for nested calls in
+# bash shebang recipes). Two problems solved:
+# 1. Without --justfile: nested `just` finds usst/justfile in the working dir, missing private recipes.
+# 2. Without --working-directory: just defaults to the justfile's directory (/nix/store/...) so
+#    `nix build "."` resolves to the ronix store path instead of the usst flake.
+# When RONIX_ROOT_IS_PRIVATE=1 (inverted arch), working dir must be nix_config_dir (the usst flake).
+# Otherwise, working dir is the ronix repo directory (justfile_directory()).
+_self := just_executable() + " --justfile " + quote(justfile()) + " --working-directory " + (
+    if env("RONIX_ROOT_IS_PRIVATE", "") == "1" { quote(nix_config_dir) } else { quote(justfile_directory()) }
+)
 
 # State file: persists last used user/host/system across invocations
 # Enables `just fresh-install` (no args) to re-use the previous user/host

@@ -10,6 +10,12 @@ nix_config_dir := env("NIX_CONFIG_DIR", env("HOME") + "/.config/nix-config")
 # The nix config flake's justfile sets RONIX_ROOT_IS_PRIVATE=1 when delegating here.
 _config_override := if env("RONIX_ROOT_IS_PRIVATE", "") == "1" { "" } else { "--override-input user-host-config path:" + nix_config_dir }
 
+# Canonical just invocation with the correct justfile (for nested calls in bash shebang recipes).
+# When this justfile is invoked via usst's `_fw` delegation (--working-directory=usst), nested
+# `just` calls would search the working directory and find usst/justfile instead of this file.
+# Using `{{ _self }} <recipe>` ensures private recipes (_auto-detect-user etc.) always resolve here.
+_self := just_executable() + " --justfile " + quote(justfile())
+
 # Default recipe - show available commands
 default:
     @just --list
@@ -35,7 +41,7 @@ _discover-hosts system:
 # Validate user against discovered users
 _validate-user user:
     #!/usr/bin/env bash
-    valid_users=$(just _discover-users | tr '\n' ' ')
+    valid_users=$({{ _self }} _discover-users | tr '\n' ' ')
     if [[ ! " $valid_users " =~ " {{ user }} " ]]; then
         echo "Error: Invalid user '{{ user }}'"
         echo "Valid users: $valid_users"
@@ -61,7 +67,7 @@ _validate-system system:
 # Validate host exists for the given system
 _validate-host-for-system system host:
     #!/usr/bin/env bash
-    valid_hosts=$(just _discover-hosts {{ system }} | tr '\n' ' ')
+    valid_hosts=$({{ _self }} _discover-hosts {{ system }} | tr '\n' ' ')
     if [[ ! " $valid_hosts " =~ " {{ host }} " ]]; then
         echo "Error: Invalid host '{{ host }}' for system '{{ system }}'"
         echo "Valid hosts for {{ system }}: $valid_hosts"
@@ -106,7 +112,7 @@ _rebuild-command system command_type user host:
     #!/usr/bin/env bash
     if [ "{{ command_type }}" = "build" ]; then
         # Use system-agnostic nix build command
-        output_path=$(just _flake-output-path {{ system }} {{ user }} {{ host }})
+        output_path=$({{ _self }} _flake-output-path {{ system }} {{ user }} {{ host }})
         nix build ".#${output_path}" {{ _config_override }} --show-trace
     else
         # Use activation script from build result
@@ -116,7 +122,7 @@ _rebuild-command system command_type user host:
         fi
 
         # Get system-specific activation script path
-        script=$(just _activation-script-path {{ system }})
+        script=$({{ _self }} _activation-script-path {{ system }})
 
         # Execute activation script with system-specific arguments
         # Both darwin and nixos now require sudo for system activation
@@ -166,7 +172,7 @@ list-combinations:
     #!/usr/bin/env bash
     echo "Available user-host combinations:"
     echo "=================================="
-    users=$(just _discover-users)
+    users=$({{ _self }} _discover-users)
     for system_dir in "{{ nix_config_dir }}/hosts"/*/; do
         if [ -d "$system_dir" ]; then
             sys=$(basename "$system_dir")
@@ -226,7 +232,7 @@ _auto-detect-system host:
 # Auto-detect user if only one exists
 _auto-detect-user:
     #!/usr/bin/env bash
-    users=$(just _discover-users)
+    users=$({{ _self }} _discover-users)
     count=$(echo "$users" | wc -l | tr -d ' ')
     if [ "$count" = "1" ]; then
         echo "$users"
@@ -239,7 +245,7 @@ _auto-detect-user:
 # Auto-detect host if only one exists in the detected system
 _auto-detect-host system:
     #!/usr/bin/env bash
-    hosts=$(just _discover-hosts {{ system }})
+    hosts=$({{ _self }} _discover-hosts {{ system }})
     count=$(echo "$hosts" | wc -l | tr -d ' ')
     if [ "$count" = "1" ]; then
         echo "$hosts"
@@ -262,7 +268,7 @@ build user="" host="":
 
     # Auto-detect user if not provided
     if [ -z "{{ user }}" ]; then
-        USER=$(just _auto-detect-user)
+        USER=$({{ _self }} _auto-detect-user)
         echo "Auto-detected user: $USER"
     else
         USER="{{ user }}"
@@ -272,18 +278,18 @@ build user="" host="":
     if [ -z "{{ host }}" ]; then
         # First need to know which system to check
         # Try to detect from current system
-        current_sys=$(just _detect-system)
-        HOST=$(just _auto-detect-host "$current_sys")
+        current_sys=$({{ _self }} _detect-system)
+        HOST=$({{ _self }} _auto-detect-host "$current_sys")
         echo "Auto-detected host: $HOST (system: $current_sys)"
         system="$current_sys"
     else
         HOST="{{ host }}"
         # Auto-detect system from host
-        system=$(just _auto-detect-system "$HOST")
+        system=$({{ _self }} _auto-detect-system "$HOST")
     fi
 
     # Validate
-    just _validate-all "$USER" "$system" "$HOST"
+    {{ _self }} _validate-all "$USER" "$system" "$HOST"
 
     echo "Building configuration for $USER on $system with host $HOST..."
     echo ""
@@ -341,7 +347,7 @@ install user="" host="":
 
     # Auto-detect user if not provided
     if [ -z "{{ user }}" ]; then
-        USER=$(just _auto-detect-user)
+        USER=$({{ _self }} _auto-detect-user)
         echo "Auto-detected user: $USER"
     else
         USER="{{ user }}"
@@ -351,18 +357,18 @@ install user="" host="":
     if [ -z "{{ host }}" ]; then
         # First need to know which system to check
         # Try to detect from current system
-        current_sys=$(just _detect-system)
-        HOST=$(just _auto-detect-host "$current_sys")
+        current_sys=$({{ _self }} _detect-system)
+        HOST=$({{ _self }} _auto-detect-host "$current_sys")
         echo "Auto-detected host: $HOST (system: $current_sys)"
         system="$current_sys"
     else
         HOST="{{ host }}"
         # Auto-detect system from host
-        system=$(just _auto-detect-system "$HOST")
+        system=$({{ _self }} _auto-detect-system "$HOST")
     fi
 
     # Validate
-    just _validate-all "$USER" "$system" "$HOST"
+    {{ _self }} _validate-all "$USER" "$system" "$HOST"
 
     echo "Installing configuration for $USER on $system with host $HOST..."
     echo ""
@@ -431,7 +437,7 @@ install-home user="" host="":
 
     # Auto-detect user if not provided
     if [ -z "{{ user }}" ]; then
-        USER=$(just _auto-detect-user)
+        USER=$({{ _self }} _auto-detect-user)
         echo "Auto-detected user: $USER"
     else
         USER="{{ user }}"
@@ -439,8 +445,8 @@ install-home user="" host="":
 
     # Auto-detect host if not provided
     if [ -z "{{ host }}" ]; then
-        current_sys=$(just _detect-system)
-        HOST=$(just _auto-detect-host "$current_sys")
+        current_sys=$({{ _self }} _detect-system)
+        HOST=$({{ _self }} _auto-detect-host "$current_sys")
         echo "Auto-detected host: $HOST"
     else
         HOST="{{ host }}"
@@ -482,7 +488,7 @@ update-input input:
 # Clean old generations and garbage collect
 clean:
     @echo "Cleaning old generations..."
-    @sys=$(just _detect-system) && \
+    @sys=$({{ _self }} _detect-system) && \
         if [ "$sys" = "darwin" ]; then \
             nix-collect-garbage -d; \
             darwin-rebuild --list-generations | head -10; \
@@ -535,8 +541,8 @@ fresh-install user="" host="":
         echo "==> Pulling nix config flake..."
         git -C "{{ nix_config_dir }}" pull
     fi
-    just clean-cache
-    just install {{ user }} {{ host }}
+    {{ _self }} clean-cache
+    {{ _self }} install {{ user }} {{ host }}
 
 # Show the diff between current and new configuration
 # Usage: just diff [user] [host]
@@ -551,7 +557,7 @@ diff user="" host="":
 
     # Auto-detect user if not provided
     if [ -z "{{ user }}" ]; then
-        USER=$(just _auto-detect-user)
+        USER=$({{ _self }} _auto-detect-user)
         echo "Auto-detected user: $USER"
     else
         USER="{{ user }}"
@@ -561,18 +567,18 @@ diff user="" host="":
     if [ -z "{{ host }}" ]; then
         # First need to know which system to check
         # Try to detect from current system
-        current_sys=$(just _detect-system)
-        HOST=$(just _auto-detect-host "$current_sys")
+        current_sys=$({{ _self }} _detect-system)
+        HOST=$({{ _self }} _auto-detect-host "$current_sys")
         echo "Auto-detected host: $HOST (system: $current_sys)"
         system="$current_sys"
     else
         HOST="{{ host }}"
         # Auto-detect system from host
-        system=$(just _auto-detect-system "$HOST")
+        system=$({{ _self }} _auto-detect-system "$HOST")
     fi
 
     # Validate
-    just _validate-all "$USER" "$system" "$HOST"
+    {{ _self }} _validate-all "$USER" "$system" "$HOST"
 
     echo "Showing diff for $USER on $system with host $HOST..."
     echo ""
@@ -614,7 +620,7 @@ build-and-push user="" host="":
 
     # Auto-detect user if not provided
     if [ -z "{{ user }}" ]; then
-        USER=$(just _auto-detect-user)
+        USER=$({{ _self }} _auto-detect-user)
         echo "Auto-detected user: $USER"
     else
         USER="{{ user }}"
@@ -624,18 +630,18 @@ build-and-push user="" host="":
     if [ -z "{{ host }}" ]; then
         # First need to know which system to check
         # Try to detect from current system
-        current_sys=$(just _detect-system)
-        HOST=$(just _auto-detect-host "$current_sys")
+        current_sys=$({{ _self }} _detect-system)
+        HOST=$({{ _self }} _auto-detect-host "$current_sys")
         echo "Auto-detected host: $HOST (system: $current_sys)"
         system="$current_sys"
     else
         HOST="{{ host }}"
         # Auto-detect system from host
-        system=$(just _auto-detect-system "$HOST")
+        system=$({{ _self }} _auto-detect-system "$HOST")
     fi
 
     # Validate
-    just _validate-all "$USER" "$system" "$HOST"
+    {{ _self }} _validate-all "$USER" "$system" "$HOST"
 
     # Step 1: Build the configuration (Feature 036: dual-mode)
     # Nix options for large downloads
@@ -846,7 +852,7 @@ user-create:
 
     # Initialize encryption keypair
     echo "Initializing encryption keypair..."
-    if ! just secrets-init-user "$username"; then
+    if ! {{ _self }} secrets-init-user "$username"; then
         echo "Error: Failed to initialize encryption keypair"
         rm -rf "$user_dir"
         exit 1
@@ -855,11 +861,11 @@ user-create:
 
     # Store secrets
     echo "Storing secrets..."
-    just secrets-set "$username" email "$email"
-    just _hash-and-store-password "$username" "$password"
+    {{ _self }} secrets-set "$username" email "$email"
+    {{ _self }} _hash-and-store-password "$username" "$password"
 
     if [ "$fullname" != "$username" ]; then
-        just secrets-set "$username" fullName "$fullname"
+        {{ _self }} secrets-set "$username" fullName "$fullname"
     fi
 
     echo ""
@@ -900,7 +906,7 @@ _hash-and-store-password user password:
         exit 1
     fi
 
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     pub_path="$user_dir/public.age"
     key_path="$HOME/.config/agenix/key.txt"
     secret_file="$user_dir/secrets.age"
@@ -940,7 +946,7 @@ secrets-init-user user:
     set -euo pipefail
 
     # Validate user exists (nix config flake — Feature 047)
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
         echo "Create user first: just user-create"
@@ -1011,7 +1017,7 @@ secrets-show-pubkey user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     pub_path="$user_dir/public.age"
     if [ -f "$pub_path" ]; then
         cat "$pub_path"
@@ -1028,7 +1034,7 @@ secrets-rotate-user user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
         exit 1
@@ -1127,10 +1133,10 @@ secrets-set user field value:
     # Note: Not using -u (nounset) to allow password hashes with $6, $5, etc.
 
     # Validate user exists
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
-        echo "Available users: $(just _discover-users | tr '\n' ' ')"
+        echo "Available users: $({{ _self }} _discover-users | tr '\n' ' ')"
         exit 1
     fi
 
@@ -1217,7 +1223,7 @@ deploy-key-create user target:
     key_path="$HOME/.ssh/id_{{ target }}"
     pub_path="${key_path}.pub"
 
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
         exit 1
@@ -1235,7 +1241,7 @@ deploy-key-create user target:
     echo ""
 
     # Store private key in secrets and commit
-    just secrets-set {{ user }} security.sshKeys.{{ target }} "$(cat "$key_path")"
+    {{ _self }} secrets-set {{ user }} security.sshKeys.{{ target }} "$(cat "$key_path")"
     git -C "{{ nix_config_dir }}" add users/{{ user }}/secrets.age
     git commit -m "chore(secrets): update {{ user }} {{ target }} deploy key"
     echo ""
@@ -1268,7 +1274,7 @@ set-password user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
         exit 1
@@ -1290,7 +1296,7 @@ set-password user:
         exit 1
     fi
 
-    just _hash-and-store-password "{{ user }}" "$password"
+    {{ _self }} _hash-and-store-password "{{ user }}" "$password"
 
     echo ""
     echo "Password updated for {{ user }}!"
@@ -1306,7 +1312,7 @@ secrets-get user field="":
     set -euo pipefail
 
     # Validate user exists
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
         exit 1
@@ -1340,10 +1346,10 @@ secrets-edit user:
     set -euo pipefail
 
     # Validate user exists
-    user_dir=$(just _user-config-dir {{ user }})
+    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
         echo "Error: User '{{ user }}' not found at $user_dir"
-        echo "Available users: $(just _discover-users | tr '\n' ' ')"
+        echo "Available users: $({{ _self }} _discover-users | tr '\n' ' ')"
         exit 1
     fi
 

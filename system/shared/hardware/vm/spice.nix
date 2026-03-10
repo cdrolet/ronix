@@ -6,7 +6,7 @@
 #
 # Provides:
 # - SPICE VD agent (clipboard, display resize, drag-and-drop)
-# - Only useful for QEMU VMs with SPICE display (not Apple Virtualization)
+# - Works with QEMU+SPICE and UTM (UTM uses SPICE for clipboard even with Apple Virtualization backend)
 {
   config,
   lib,
@@ -14,5 +14,6 @@
   ...
 }: {
   # SPICE guest agent for clipboard sharing and better host integration
+  # UTM uses SPICE protocol for clipboard/input even with Apple Virtualization backend
   services.spice-vdagentd.enable = lib.mkDefault true;
 }

@@ -571,10 +571,10 @@ fresh-install user="" host="":
     #!/usr/bin/env bash
     set -euo pipefail
     echo "==> Pulling framework repo..."
-    git pull
+    git pull --ff-only
     if [ -d "{{ nix_config_dir }}" ]; then
         echo "==> Pulling nix config flake..."
-        git -C "{{ nix_config_dir }}" pull
+        git -C "{{ nix_config_dir }}" pull --ff-only
     fi
     {{ _self }} clean-cache
     {{ _self }} install {{ user }} {{ host }}

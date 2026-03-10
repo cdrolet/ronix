@@ -16,6 +16,10 @@ _config_override := if env("RONIX_ROOT_IS_PRIVATE", "") == "1" { "" } else { "--
 # Using `{{ _self }} <recipe>` ensures private recipes (_auto-detect-user etc.) always resolve here.
 _self := just_executable() + " --justfile " + quote(justfile())
 
+# State file: persists last used user/host/system across invocations
+# Enables `just fresh-install` (no args) to re-use the previous user/host
+_state_file := env("HOME") + "/.local/share/nix-config/last.json"
+
 # Default recipe - show available commands
 default:
     @just --list
@@ -229,7 +233,15 @@ _auto-detect-system host:
     done
     exit 1
 
-# Auto-detect user if only one exists
+# Save last-used user/host/system to state file (for zero-arg invocations)
+_save-state user host system:
+    #!/usr/bin/env bash
+    mkdir -p "$(dirname "{{ _state_file }}")"
+    printf '{"user":"%s","host":"%s","system":"%s","updatedAt":"%s"}\n' \
+        "{{ user }}" "{{ host }}" "{{ system }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        > "{{ _state_file }}"
+
+# Auto-detect user: single user → use it; multiple → fall back to state file
 _auto-detect-user:
     #!/usr/bin/env bash
     users=$({{ _self }} _discover-users)
@@ -237,12 +249,20 @@ _auto-detect-user:
     if [ "$count" = "1" ]; then
         echo "$users"
     else
+        # Fall back to last saved state
+        if [ -f "{{ _state_file }}" ]; then
+            saved=$(sed -n 's/.*"user":"\([^"]*\)".*/\1/p' "{{ _state_file }}" 2>/dev/null)
+            if [ -n "$saved" ] && echo "$users" | grep -qx "$saved"; then
+                echo "$saved"
+                exit 0
+            fi
+        fi
         echo "Error: Multiple users found. Please specify user." >&2
         echo "Available users: $(echo $users | tr '\n' ' ')" >&2
         exit 1
     fi
 
-# Auto-detect host if only one exists in the detected system
+# Auto-detect host: single host → use it; multiple → fall back to state file
 _auto-detect-host system:
     #!/usr/bin/env bash
     hosts=$({{ _self }} _discover-hosts {{ system }})
@@ -250,6 +270,14 @@ _auto-detect-host system:
     if [ "$count" = "1" ]; then
         echo "$hosts"
     else
+        # Fall back to last saved state
+        if [ -f "{{ _state_file }}" ]; then
+            saved=$(sed -n 's/.*"host":"\([^"]*\)".*/\1/p' "{{ _state_file }}" 2>/dev/null)
+            if [ -n "$saved" ] && echo "$hosts" | grep -qx "$saved"; then
+                echo "$saved"
+                exit 0
+            fi
+        fi
         echo "Error: Multiple hosts found for system {{ system }}. Please specify host." >&2
         echo "Available hosts: $(echo $hosts | tr '\n' ' ')" >&2
         exit 1
@@ -333,6 +361,8 @@ build user="" host="":
     echo "Build successful!"
     echo "  System: $system configuration for $HOST"
     echo "  User: home-manager configuration for $USER"
+
+    {{ _self }} _save-state "$USER" "$HOST" "$system"
 
 # Install a configuration (Feature 036: dual-mode - system + user)
 # Usage: just install [user] [host]
@@ -423,6 +453,8 @@ install user="" host="":
     echo "  System: $system configuration for $HOST"
     echo "  User: home-manager configuration for $USER"
 
+    {{ _self }} _save-state "$USER" "$HOST" "$system"
+
 # Install only home-manager configuration (user space only)
 # Usage: just install-home [user] [host]
 # Useful for first-boot setup on NixOS after fresh install
@@ -472,6 +504,9 @@ install-home user="" host="":
 
     echo "Home-manager installation complete!"
     echo "You may need to restart your shell: exec $SHELL"
+
+    system=$({{ _self }} _auto-detect-system "$HOST")
+    {{ _self }} _save-state "$USER" "$HOST" "$system"
 
 # Update flake inputs
 update:

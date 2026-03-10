@@ -27,7 +27,7 @@ _state_file := env("HOME") + "/.local/share/nix-config/last.json"
 
 # Default recipe - show available commands
 default:
-    @just --list
+    @{{ _self }} --list
 
 # Discover users from nix config flake
 _discover-users:
@@ -85,9 +85,9 @@ _validate-host-for-system system host:
 
 # Common validation for all operations
 _validate-all user system host:
-    @just _validate-user {{ user }}
-    @just _validate-system {{ system }}
-    @just _validate-host-for-system {{ system }} {{ host }}
+    @{{ _self }} _validate-user {{ user }}
+    @{{ _self }} _validate-system {{ system }}
+    @{{ _self }} _validate-host-for-system {{ system }} {{ host }}
 
 # Get the flake output path for a system configuration
 # Returns the nix build target path for the given system
@@ -156,7 +156,7 @@ _detect-system:
 # List all valid users (discovered from filesystem)
 list-users:
     @echo "Valid users:"
-    @just _discover-users
+    @{{ _self }} _discover-users
 
 # List all hosts organized by system (from nix config flake)
 list-hosts:
@@ -566,9 +566,9 @@ private-clone url:
 # Clears evaluation cache and flake metadata before building
 fresh-build user="" host="":
     @echo "Fresh build: cleaning caches first..."
-    @just clean-cache
+    @{{ _self }} clean-cache
     @echo ""
-    @just build {{ user }} {{ host }}
+    @{{ _self }} build {{ user }} {{ host }}
 
 # Fresh install - pull both repos, clean caches, then install
 # Usage: just fresh-install [user] [host]

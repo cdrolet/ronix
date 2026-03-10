@@ -67,6 +67,10 @@ in {
   };
 
   # Linux: .desktop file for GNOME/FreeDesktop dock and app launcher
+  # Uses kgx (GNOME Console) directly instead of Terminal=true.
+  # Terminal=true triggers GNOME's launch mechanism which keeps the window
+  # open in "read only" mode after the script exits. Invoking kgx directly
+  # causes it to close the window when the command exits.
   home.file.".local/share/applications/nix-update.desktop" = lib.mkIf pkgs.stdenv.isLinux {
     text = ''
       [Desktop Entry]
@@ -74,9 +78,9 @@ in {
       Type=Application
       Name=Nix Update
       Comment=Update system configuration (git pull + rebuild + install)
-      Exec=${config.home.homeDirectory}/.local/bin/nix-update
+      Exec=${pkgs.gnome-console}/bin/kgx --title "Nix Update" -- ${config.home.homeDirectory}/.local/bin/nix-update
       Icon=system-software-update
-      Terminal=true
+      Terminal=false
       Categories=System;
       Keywords=nix;update;system;rebuild;
     '';

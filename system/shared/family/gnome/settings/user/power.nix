@@ -6,6 +6,7 @@
 # Settings include:
 # - Screen dimming and blank timeout
 # - Suspend behavior (disabled in VMs via config.host.virtualMachine)
+# - Lock screen (disabled in VMs — no security benefit, just friction)
 # - Power button action
 {
   config,
@@ -52,6 +53,18 @@ in {
 
       # Power button action
       power-button-action = lib.mkDefault "interactive";
+    };
+
+    # ============================================================================
+    # Lock Screen (disabled in VMs)
+    # ============================================================================
+
+    "org/gnome/desktop/screensaver" = lib.mkIf isVM {
+      lock-enabled = false;
+    };
+
+    "org/gnome/desktop/lockdown" = lib.mkIf isVM {
+      disable-lock-screen = true;
     };
   };
 }

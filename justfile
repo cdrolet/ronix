@@ -140,7 +140,7 @@ _detect-system:
     #!/usr/bin/env bash
     case "$(uname -s)" in
         Darwin) echo "darwin" ;;
-        Linux)  echo "linux" ;;
+        Linux)  echo "nixos" ;;
         *)      echo "Error: Unsupported system $(uname -s)" >&2; exit 1 ;;
     esac
 

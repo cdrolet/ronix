@@ -24,9 +24,6 @@
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Always pause before closing so the user can read the output
-    trap 'echo ""; read -rp "Press Enter to close..." _' EXIT
-
     CONFIG_DIR="''${NIX_CONFIG_DIR:-${configDir}}"
 
     echo "======================================"
@@ -67,10 +64,7 @@ in {
   };
 
   # Linux: .desktop file for GNOME/FreeDesktop dock and app launcher
-  # Uses kgx (GNOME Console) directly instead of Terminal=true.
-  # Terminal=true triggers GNOME's launch mechanism which keeps the window
-  # open in "read only" mode after the script exits. Invoking kgx directly
-  # causes it to close the window when the command exits.
+  # Uses foot (Wayland-native terminal) — closes automatically when script exits.
   home.file.".local/share/applications/nix-update.desktop" = lib.mkIf pkgs.stdenv.isLinux {
     text = ''
       [Desktop Entry]
@@ -78,7 +72,7 @@ in {
       Type=Application
       Name=Nix Update
       Comment=Update system configuration (git pull + rebuild + install)
-      Exec=${pkgs.gnome-console}/bin/kgx --title "Nix Update" -- ${config.home.homeDirectory}/.local/bin/nix-update
+      Exec=${pkgs.foot}/bin/foot --title "Nix Update" ${config.home.homeDirectory}/.local/bin/nix-update
       Icon=system-software-update
       Terminal=false
       Categories=System;

@@ -39,7 +39,7 @@
     read -rp "Proceed with update? [y/N] " confirm
     case "$confirm" in
       [yY] | [yY][eE][sS]) ;;
-      *) echo "Cancelled."; exit 0 ;;
+      *) echo "Cancelled."; read -rp "Press Enter to close..." _; exit 0 ;;
     esac
 
     echo ""
@@ -52,6 +52,9 @@
 
     cd "$CONFIG_DIR"
     just fresh-install
+
+    echo ""
+    read -rp "Press Enter to close..." _
   '';
 in {
   # just is a runtime dependency: the script calls `just fresh-install`

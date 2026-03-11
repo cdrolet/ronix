@@ -64,7 +64,8 @@ in {
   };
 
   # Linux: .desktop file for GNOME/FreeDesktop dock and app launcher
-  # Uses foot (Wayland-native terminal) — closes automatically when script exits.
+  # Uses $TERMINAL session variable (set by the active terminal app, e.g. ghostty).
+  # Falls back to xterm if unset. Closes automatically when script exits.
   home.file.".local/share/applications/nix-update.desktop" = lib.mkIf pkgs.stdenv.isLinux {
     text = ''
       [Desktop Entry]
@@ -72,7 +73,7 @@ in {
       Type=Application
       Name=Nix Update
       Comment=Update system configuration (git pull + rebuild + install)
-      Exec=${pkgs.foot}/bin/foot --title "Nix Update" ${config.home.homeDirectory}/.local/bin/nix-update
+      Exec=bash -c '"''${TERMINAL:-xterm}" -e ${config.home.homeDirectory}/.local/bin/nix-update'
       Icon=system-software-update
       Terminal=false
       Categories=System;

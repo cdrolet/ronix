@@ -4,7 +4,7 @@
 # Platform: macOS / launchd user agents
 # Context: Home-manager (user-level settings, Feature 039)
 #
-# Reads host.updateSystemFrequency to create a ~/Library/LaunchAgents/ plist:
+# Reads host.schedule.updateSystem.frequency to create a ~/Library/LaunchAgents/ plist:
 #   - "on-boot":          runs once at each login (RunAtLoad = true)
 #   - "daily" / "weekly": runs on a calendar schedule (3 AM / Sunday 3 AM)
 #
@@ -19,7 +19,7 @@
   pkgs,
   ...
 }: let
-  freq = config.host.updateSystemFrequency;
+  freq = config.host.schedule.updateSystem.frequency;
   hasAutoUpdate = freq != null;
 
   configDir = "${config.home.homeDirectory}/.config/nix-config";

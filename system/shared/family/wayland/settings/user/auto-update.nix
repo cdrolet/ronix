@@ -4,7 +4,7 @@
 # Platform: Linux / systemd user services
 # Context: Home-manager (user-level settings, Feature 039)
 #
-# Reads host.updateSystemFrequency to create:
+# Reads host.schedule.updateSystem.frequency to create:
 #   - "on-boot":          systemd user service, starts at login
 #   - "daily" / "weekly": systemd user timer + service (3 AM, persistent)
 #
@@ -19,7 +19,7 @@
   pkgs,
   ...
 }: let
-  freq = config.host.updateSystemFrequency;
+  freq = config.host.schedule.updateSystem.frequency;
   hasAutoUpdate = freq != null;
   isScheduled = hasAutoUpdate && freq != "on-boot";
 

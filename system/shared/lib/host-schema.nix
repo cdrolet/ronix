@@ -97,27 +97,73 @@
           example = ["qemu-guest" "spice" "standard-partitions"];
         };
 
-        updateSystemFrequency = lib.mkOption {
-          type = lib.types.nullOr (lib.types.enum ["on-boot" "daily" "weekly"]);
-          default = null;
-          description = ''
-            How often to automatically pull and apply the latest nix-config.
+        schedule = lib.mkOption {
+          default = {};
+          description = "Scheduled automation settings for this host.";
+          type = lib.types.submodule {
+            options = {
+              updateSystem = lib.mkOption {
+                default = {};
+                description = "Automatic system update schedule.";
+                type = lib.types.submodule {
+                  options.frequency = lib.mkOption {
+                    type = lib.types.nullOr (lib.types.enum ["on-boot" "daily" "weekly"]);
+                    default = null;
+                    description = ''
+                      How often to automatically pull and apply the latest nix-config.
 
-            Runs `just fresh-install` (git pull + rebuild + activate) in the
-            repository at $HOME/.config/nix-config.
+                      Runs `just fresh-install` (git pull + rebuild + activate) in the
+                      repository at $HOME/.config/nix-config.
 
-            - null:       no automatic updates (default)
-            - "on-boot":  update once each time the user logs in
-            - "daily":    update once per day (at 3:00 AM)
-            - "weekly":   update once per week (Sunday at 3:00 AM)
+                      - null:       no automatic updates (default)
+                      - "on-boot":  update once each time the user logs in
+                      - "daily":    update once per day (at 3:00 AM)
+                      - "weekly":   update once per week (Sunday at 3:00 AM)
 
-            Log output: ~/.local/share/nix-config/auto-update.log
+                      Log output: ~/.local/share/nix-config/auto-update.log
 
-            Note: System-level activation (nixos-rebuild / darwin-rebuild)
-            requires passwordless sudo. Add to /etc/sudoers:
-              %wheel ALL=(ALL) NOPASSWD: /run/current-system/sw/bin/nixos-rebuild
-          '';
-          example = "daily";
+                      Note: System-level activation (nixos-rebuild / darwin-rebuild)
+                      requires passwordless sudo. Add to /etc/sudoers:
+                        %wheel ALL=(ALL) NOPASSWD: /run/current-system/sw/bin/nixos-rebuild
+                    '';
+                    example = "daily";
+                  };
+                };
+              };
+
+              garbageCollection = lib.mkOption {
+                default = {};
+                description = "Nix store garbage collection schedule.";
+                type = lib.types.submodule {
+                  options = {
+                    frequency = lib.mkOption {
+                      type = lib.types.nullOr (lib.types.enum ["daily" "weekly" "monthly"]);
+                      default = "weekly";
+                      description = ''
+                        How often to run Nix garbage collection.
+
+                        - null:      disable automatic garbage collection
+                        - "daily":   collect daily
+                        - "weekly":  collect weekly (default)
+                        - "monthly": collect monthly
+                      '';
+                      example = "weekly";
+                    };
+                    olderThan = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = "30d";
+                      description = ''
+                        Delete store paths not referenced by any generation newer than this age.
+                        Format: Nix duration string (e.g. "7d", "30d", "3m").
+                        null disables the age filter (deletes all unreferenced paths).
+                      '';
+                      example = "30d";
+                    };
+                  };
+                };
+              };
+            };
+          };
         };
 
         display = lib.mkOption {

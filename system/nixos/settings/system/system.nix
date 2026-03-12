@@ -30,17 +30,6 @@
   };
 
   # ============================================================================
-  # Garbage Collection
-  # ============================================================================
-  # Automatic cleanup of old generations
-
-  nix.gc = {
-    automatic = lib.mkDefault true;
-    dates = lib.mkDefault "weekly";
-    options = lib.mkDefault "--delete-older-than 30d";
-  };
-
-  # ============================================================================
   # System State Version
   # ============================================================================
   # NixOS compatibility version - determines which package/service versions to use

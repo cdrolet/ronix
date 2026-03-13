@@ -1,6 +1,6 @@
-# nix-config
+# ronix
 
-Charles' declarative multi-platform system configuration using Nix flakes.
+declarative framework for system configuration using Nix flakes.
 
 ## Overview
 

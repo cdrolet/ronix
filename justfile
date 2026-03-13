@@ -584,6 +584,20 @@ fresh-install user="" host="":
     {{ _self }} clean-cache
     {{ _self }} install {{ user }} {{ host }}
 
+# Fresh install home - pull both repos, clean caches, then install home only
+# Usage: just fresh-install-home [user] [host]
+fresh-install-home user="" host="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "==> Pulling framework repo..."
+    git pull --ff-only
+    if [ -d "{{ nix_config_dir }}" ]; then
+        echo "==> Pulling nix config flake..."
+        git -C "{{ nix_config_dir }}" pull --ff-only
+    fi
+    {{ _self }} clean-cache
+    {{ _self }} install-home {{ user }} {{ host }}
+
 # Show the diff between current and new configuration
 # Usage: just diff [user] [host]
 # If user omitted: auto-detects if only one user exists

@@ -44,9 +44,9 @@
     while true; do
       clear
       printf "\n"
-      printf "  ''${CYAN}┌─────────────────────────────────────────────────┐''${RESET}\n"
-      printf "  ''${CYAN}│''${RESET}          ''${BOLD}Nix Config — Update Tool''${RESET}              ''${CYAN}│''${RESET}\n"
-      printf "  ''${CYAN}└─────────────────────────────────────────────────┘''${RESET}\n"
+      printf "  ''${CYAN}┌─────────────────────────────────────────────────────────┐''${RESET}\n"
+      printf "  ''${CYAN}│''${RESET}               ''${BOLD}Nix Config — Update Tool''${RESET}                  ''${CYAN}│''${RESET}\n"
+      printf "  ''${CYAN}└─────────────────────────────────────────────────────────┘''${RESET}\n"
       printf "\n"
       printf "  ''${BOLD}[1]''${RESET}  Full update      ''${DIM}pull + cache clear + rebuild system & home''${RESET}\n"
       printf "  ''${BOLD}[2]''${RESET}  Home update      ''${DIM}pull + cache clear + rebuild home only''${RESET}\n"

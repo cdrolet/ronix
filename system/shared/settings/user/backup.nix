@@ -140,7 +140,7 @@ EOF
     programs.bash.bashrcExtra = lib.mkAfter ''
       [ -f "${home}/.config/restic/env" ] && source "${home}/.config/restic/env"
     '';
-    programs.zsh.initExtra = lib.mkAfter ''
+    programs.zsh.initContent = lib.mkAfter ''
       [ -f "${home}/.config/restic/env" ] && source "${home}/.config/restic/env"
     '';
   })

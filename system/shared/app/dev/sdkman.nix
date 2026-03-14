@@ -23,7 +23,7 @@
   '';
 
   # Initialize SDKMAN in bash (for compatibility)
-  programs.bash.initExtra = lib.mkAfter ''
+  programs.bash.initContent = lib.mkAfter ''
     # SDKMAN initialization
     if [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
       source "$HOME/.sdkman/bin/sdkman-init.sh"

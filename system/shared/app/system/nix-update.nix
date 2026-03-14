@@ -48,8 +48,8 @@
       printf "  ''${CYAN}│''${RESET}               ''${BOLD}Nix Config — Update Tool''${RESET}                  ''${CYAN}│''${RESET}\n"
       printf "  ''${CYAN}└─────────────────────────────────────────────────────────┘''${RESET}\n"
       printf "\n"
-      printf "  ''${BOLD}[1]''${RESET}  Full update      ''${DIM}rebuild system & home''${RESET}\n"
-      printf "  ''${BOLD}[2]''${RESET}  Home update      ''${DIM}rebuild home only''${RESET}\n"
+      printf "  ''${BOLD}[1]''${RESET}  Full update      ''${DIM}pull + rebuild system & home''${RESET}\n"
+      printf "  ''${BOLD}[2]''${RESET}  Home update      ''${DIM}pull + rebuild home only''${RESET}\n"
       printf "  ''${BOLD}[3]''${RESET}  Clear cache      ''${DIM}clear nix evaluation cache''${RESET}\n"
       printf "  ''${BOLD}[4]''${RESET}  Garbage collect  ''${DIM}delete old generations''${RESET}\n"
       printf "  ''${BOLD}[5]''${RESET}  Exit\n"
@@ -62,7 +62,7 @@
           clear
           printf "\n  ''${GREEN}▶ Running full update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          if just install; then
+          if git pull && just install; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
           else
@@ -73,7 +73,7 @@
           clear
           printf "\n  ''${GREEN}▶ Running home update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          if just install-home; then
+          if git pull && just install-home; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
           else

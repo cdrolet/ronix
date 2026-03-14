@@ -885,6 +885,123 @@
           '';
         };
 
+        # Backup configuration (Restic + Backblaze B2)
+        backup = lib.mkOption {
+          type = lib.types.nullOr (lib.types.submodule {
+            options = {
+              repository = lib.mkOption {
+                type = lib.types.submodule {
+                  options = {
+                    bucket = lib.mkOption {
+                      type = lib.types.str;
+                      description = "Backblaze B2 bucket name.";
+                      example = "my-backup-bucket";
+                    };
+                    endpoint = lib.mkOption {
+                      type = lib.types.str;
+                      description = "B2 S3-compatible endpoint (without https://).";
+                      example = "s3.ca-east-006.backblazeb2.com";
+                    };
+                    keyId = lib.mkOption {
+                      type = lib.types.str;
+                      default = "<secret>";
+                      description = "B2 application key ID. Use \"<secret>\" to read from secrets.age.";
+                    };
+                    applicationKey = lib.mkOption {
+                      type = lib.types.str;
+                      default = "<secret>";
+                      description = "B2 application key. Use \"<secret>\" to read from secrets.age.";
+                    };
+                    password = lib.mkOption {
+                      type = lib.types.str;
+                      default = "<secret>";
+                      description = "Restic repository encryption password. Use \"<secret>\" to read from secrets.age.";
+                    };
+                  };
+                };
+                description = "Backblaze B2 repository connection and credentials.";
+              };
+
+              schedule = lib.mkOption {
+                type = lib.types.nullOr (lib.types.enum ["daily" "weekly"]);
+                default = "daily";
+                description = "How often to run automatic backups.";
+              };
+
+              retain = lib.mkOption {
+                type = lib.types.submodule {
+                  options = {
+                    daily = lib.mkOption {
+                      type = lib.types.int;
+                      default = 7;
+                      description = "Number of daily snapshots to keep.";
+                    };
+                    weekly = lib.mkOption {
+                      type = lib.types.int;
+                      default = 4;
+                      description = "Number of weekly snapshots to keep.";
+                    };
+                    monthly = lib.mkOption {
+                      type = lib.types.int;
+                      default = 6;
+                      description = "Number of monthly snapshots to keep.";
+                    };
+                  };
+                };
+                default = {};
+                description = "Snapshot retention policy.";
+              };
+
+              paths = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [];
+                description = "Additional paths to back up beyond the defaults.";
+                example = ["~/Work" "~/Archive"];
+              };
+
+              exclude = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [];
+                description = "Additional exclude patterns beyond defaults.";
+                example = ["**/.DS_Store" "~/project/large-assets"];
+              };
+            };
+          });
+          default = null;
+          description = ''
+            Restic backup configuration targeting a Backblaze B2 bucket.
+
+            Default included paths:
+              ~/Documents  ~/Pictures  ~/Videos  ~/Music  ~/project
+              ~/.config/agenix  ~/.gnupg  ~/.ssh  ~/.local/share
+
+            Default excluded patterns:
+              ~/.local/share/nix-config  ~/.local/share/Trash
+              **/node_modules  **/.git  **/*.tmp
+
+            Credentials are read from secrets.age at activation time and written
+            to ~/.config/restic/env (chmod 600).
+
+            Example:
+              backup = {
+                repository = {
+                  bucket   = "my-bucket";
+                  endpoint = "s3.ca-east-006.backblazeb2.com";
+                  keyId          = "<secret>";
+                  applicationKey = "<secret>";
+                  password       = "<secret>";
+                };
+                schedule = "daily";
+                retain   = { daily = 7; weekly = 4; monthly = 6; };
+              };
+
+            Secrets:
+              just secrets-set <user> backup.repository.keyId          "..."
+              just secrets-set <user> backup.repository.applicationKey "..."
+              just secrets-set <user> backup.repository.password       "..."
+          '';
+        };
+
         # Note: Additional fields can be added without schema changes thanks to freeformType
         # Common freeform fields used with secrets:
         #   tokens.github = "<secret>";

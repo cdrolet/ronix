@@ -960,13 +960,21 @@ _hash-and-store-password user password:
         exit 1
     fi
 
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     pub_path="$user_dir/public.age"
     key_path="$HOME/.config/agenix/key.txt"
     secret_file="$user_dir/secrets.age"
 
     if [ ! -f "$pub_path" ]; then
-        echo "Error: $pub_path not found. Run 'just secrets-init-user {{ user }}' first"
+        echo "Error: $pub_path not found. Run 'just secrets-init-user $user' first"
         exit 1
     fi
     if [ ! -f "$key_path" ]; then
@@ -1000,9 +1008,17 @@ secrets-init-user user:
     set -euo pipefail
 
     # Validate user exists (nix config flake — Feature 047)
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
+        echo "Error: User '$user' not found at $user_dir"
         echo "Create user first: just user-create"
         exit 1
     fi
@@ -1011,21 +1027,21 @@ secrets-init-user user:
 
     # Check if already initialized
     if [ -f "$pub_path" ]; then
-        echo "User {{ user }} already has a keypair."
-        echo "Public key (user/{{ user }}/public.age):"
+        echo "User $user already has a keypair."
+        echo "Public key (user/$user/public.age):"
         cat "$pub_path"
         echo ""
         if [ -f "$key_path" ]; then
             echo "Private key exists at: $key_path"
         else
             echo "Warning: Private key not found at $key_path"
-            echo "Restore it from backup or run 'just secrets-rotate-user {{ user }}' to generate a new one."
+            echo "Restore it from backup or run 'just secrets-rotate-user $user' to generate a new one."
         fi
         exit 0
     fi
 
     # Generate new keypair
-    echo "Initializing keypair for user {{ user }}..."
+    echo "Initializing keypair for user $user..."
     mkdir -p "$(dirname "$key_path")"
     # Generate key and extract public key
     nix shell nixpkgs#age -c age-keygen -o "$key_path" 2>&1 | grep "Public key:" | cut -d: -f2 | tr -d ' ' > "$pub_path"
@@ -1046,9 +1062,9 @@ secrets-init-user user:
     echo "    bw get template item | jq '"
     echo "      .type = 2 |"
     echo "      .secureNote.type = 0 |"
-    echo "      .name = \"{{ user }} - nix-config age key\" |"
+    echo "      .name = \"$user - nix-config age key\" |"
     echo "      .notes = \"'\$(cat $key_path)'\" |"
-    echo "      .fields = [{name: \"username\", value: \"{{ user }}\", type: 0}]"
+    echo "      .fields = [{name: \"username\", value: \"$user\", type: 0}]"
     echo "    ' | bw encode | bw create item"
     echo ""
     echo "  Option 2 - Manual distribution:"
@@ -1060,9 +1076,9 @@ secrets-init-user user:
     echo "    export AGENIX_KEY=\$(cat $key_path)"
     echo ""
     echo "Next steps:"
-    echo "  1. Commit users/{{ user }}/public.age to the nix config flake"
+    echo "  1. Commit users/$user/public.age to the nix config flake"
     echo "  2. Distribute private key using one of the options above"
-    echo "  3. Add secrets: just secrets-set {{ user }} <field> <value>"
+    echo "  3. Add secrets: just secrets-set $user <field> <value>"
 
 # Show a user's public key
 
@@ -1071,13 +1087,21 @@ secrets-show-pubkey user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     pub_path="$user_dir/public.age"
     if [ -f "$pub_path" ]; then
         cat "$pub_path"
     else
         echo "Error: $pub_path not found"
-        echo "Run 'just secrets-init-user {{ user }}' to create the keypair"
+        echo "Run 'just secrets-init-user $user' to create the keypair"
         exit 1
     fi
 
@@ -1088,9 +1112,17 @@ secrets-rotate-user user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
+        echo "Error: User '$user' not found at $user_dir"
         exit 1
     fi
 
@@ -1100,7 +1132,7 @@ secrets-rotate-user user:
     backup_key="$key_path.backup-$(date +%s)"
     backup_pub="$pub_path.backup-$(date +%s)"
 
-    echo "Rotating encryption key for user {{ user }}..."
+    echo "Rotating encryption key for user $user..."
     echo ""
     echo "WARNING: This will generate a new keypair and re-encrypt all secrets."
     echo "Make sure you have backed up the current key!"
@@ -1163,40 +1195,56 @@ secrets-rotate-user user:
     echo "    bw get template item | jq '"
     echo "      .type = 2 |"
     echo "      .secureNote.type = 0 |"
-    echo "      .name = \"{{ user }} - nix-config age key\" |"
+    echo "      .name = \"$user - nix-config age key\" |"
     echo "      .notes = \"'\$(cat $key_path)'\" |"
-    echo "      .fields = [{name: \"username\", value: \"{{ user }}\", type: 0}]"
+    echo "      .fields = [{name: \"username\", value: \"$user\", type: 0}]"
     echo "    ' | bw encode | bw create item"
     echo ""
     echo "  Option 2 - Manual distribution:"
     echo "    scp $key_path other-machine:~/.config/agenix/"
     echo ""
     echo "Next steps:"
-    echo "  1. Commit updated users/{{ user }}/public.age in the nix config flake"
+    echo "  1. Commit updated users/$user/public.age in the nix config flake"
     echo "  2. Distribute new private key to all machines"
     echo "  3. Test decryption: just secrets-list"
 
 # Set a secret value (one-command mode)
 # Usage: just secrets-set <user> <field> <value>
 # Example: just secrets-set cdrokar email "me@example.com"
-
 # Example: just secrets-set cdrokar tokens.github "ghp_xxx"
+# Example: just secrets-set ~/project/usst/users/cdrokar backup.repository.keyId "..."
+#   (path form: NIX_CONFIG_DIR and username extracted from path, bypasses delegation issues)
 secrets-set user field value:
     #!/usr/bin/env bash
     set -eo pipefail
     # Note: Not using -u (nounset) to allow password hashes with $6, $5, etc.
 
+    # Resolve user, user_dir, and config_dir from the 'user' argument.
+    # Path form (starts with /, ~, or ./): extract config dir and username from the path.
+    # Name form (plain username): use NIX_CONFIG_DIR as usual.
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+        config_dir="$(dirname "$(dirname "$user_dir")")"
+    else
+        user="{{ user }}"
+        config_dir="{{ nix_config_dir }}"
+        user_dir="$config_dir/users/$user"
+    fi
+
+    config_file="$config_dir/users/$user/default.nix"
+
     # Validate user exists
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
-        echo "Available users: $({{ _self }} _discover-users | tr '\n' ' ')"
+        echo "Error: User '$user' not found at $user_dir"
         exit 1
     fi
 
     # Password requires hashing — always use set-password
     if [ "{{ field }}" = "password" ] || [ "{{ field }}" = "security.password" ]; then
-        echo "Use 'just set-password {{ user }}' to set passwords (handles hashing automatically)"
+        echo "Use 'just set-password $user' to set passwords (handles hashing automatically)"
         exit 1
     fi
 
@@ -1204,7 +1252,7 @@ secrets-set user field value:
     pub_path="$user_dir/public.age"
     if [ ! -f "$pub_path" ]; then
         echo "Error: $pub_path not found"
-        echo "Run 'just secrets-init-user {{ user }}' first to create the keypair"
+        echo "Run 'just secrets-init-user $user' first to create the keypair"
         exit 1
     fi
 
@@ -1212,12 +1260,11 @@ secrets-set user field value:
     key_path="$HOME/.config/agenix/key.txt"
     if [ ! -f "$key_path" ]; then
         echo "Error: Private key not found at $key_path"
-        echo "Restore it from backup or run 'just secrets-init-user {{ user }}' to create a new one"
+        echo "Restore it from backup or run 'just secrets-init-user $user' to create a new one"
         exit 1
     fi
 
     secret_file="$user_dir/secrets.age"
-    config_file="{{ nix_config_dir }}/users/{{ user }}/default.nix"
     pubkey=$(cat "$pub_path")
 
     # Auto-create empty secrets file if missing
@@ -1277,9 +1324,19 @@ deploy-key-create user target:
     key_path="$HOME/.ssh/id_{{ target }}"
     pub_path="${key_path}.pub"
 
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+        config_dir="$(dirname "$(dirname "$user_dir")")"
+    else
+        user="{{ user }}"
+        config_dir="{{ nix_config_dir }}"
+        user_dir="$config_dir/users/$user"
+    fi
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
+        echo "Error: User '$user' not found at $user_dir"
         exit 1
     fi
 
@@ -1295,9 +1352,9 @@ deploy-key-create user target:
     echo ""
 
     # Store private key in secrets and commit
-    {{ _self }} secrets-set {{ user }} security.sshKeys.{{ target }} "$(cat "$key_path")"
-    git -C "{{ nix_config_dir }}" add users/{{ user }}/secrets.age
-    git commit -m "chore(secrets): update {{ user }} {{ target }} deploy key"
+    {{ _self }} secrets-set "$user_dir" security.sshKeys.{{ target }} "$(cat "$key_path")"
+    git -C "$config_dir" add users/$user/secrets.age
+    git commit -m "chore(secrets): update $user {{ target }} deploy key"
     echo ""
 
     # Output public key with instructions
@@ -1316,7 +1373,7 @@ deploy-key-create user target:
     cat "$pub_path"
     echo "--- End ---"
     echo ""
-    echo "Make sure users/{{ user }}/default.nix (nix config flake) has:"
+    echo "Make sure users/$user/default.nix (nix config flake) has:"
     echo "  security.sshKeys.{{ target }} = \"<secret>\";"
     echo ""
 
@@ -1328,14 +1385,22 @@ set-password user:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
+        echo "Error: User '$user' not found at $user_dir"
         exit 1
     fi
 
     # Prompt for password (hidden input)
-    read -sp "New password for {{ user }}: " password
+    read -sp "New password for $user: " password
     echo ""
     read -sp "Confirm password: " password_confirm
     echo ""
@@ -1350,11 +1415,11 @@ set-password user:
         exit 1
     fi
 
-    {{ _self }} _hash-and-store-password "{{ user }}" "$password"
+    {{ _self }} _hash-and-store-password "$user_dir" "$password"
 
     echo ""
-    echo "Password updated for {{ user }}!"
-    echo "Run 'just install {{ user }} <host>' to apply."
+    echo "Password updated for $user!"
+    echo "Run 'just install $user <host>' to apply."
 
 # Show decrypted value of a secret field
 # Usage: just secrets-get <user> [field]
@@ -1366,9 +1431,17 @@ secrets-get user field="":
     set -euo pipefail
 
     # Validate user exists
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
+        echo "Error: User '$user' not found at $user_dir"
         exit 1
     fi
 
@@ -1377,7 +1450,7 @@ secrets-get user field="":
 
     if [ ! -f "$secret_file" ]; then
         echo "Error: $secret_file not found"
-        echo "Run 'just secrets-set {{ user }} <field> <value>' first"
+        echo "Run 'just secrets-set $user <field> <value>' first"
         exit 1
     fi
 
@@ -1400,9 +1473,17 @@ secrets-edit user:
     set -euo pipefail
 
     # Validate user exists
-    user_dir=$({{ _self }} _user-config-dir {{ user }})
+    raw_user="{{ user }}"
+    if [[ "$raw_user" == /* ]] || [[ "$raw_user" == ~* ]] || [[ "$raw_user" == ./* ]]; then
+        expanded="${raw_user/#\~/$HOME}"
+        user_dir="$(cd "$expanded" 2>/dev/null && pwd || echo "$expanded")"
+        user="$(basename "$user_dir")"
+    else
+        user="{{ user }}"
+        user_dir="{{ nix_config_dir }}/users/$user"
+    fi
     if [ ! -d "$user_dir" ]; then
-        echo "Error: User '{{ user }}' not found at $user_dir"
+        echo "Error: User '$user' not found at $user_dir"
         echo "Available users: $({{ _self }} _discover-users | tr '\n' ' ')"
         exit 1
     fi
@@ -1411,7 +1492,7 @@ secrets-edit user:
     pub_path="$user_dir/public.age"
     if [ ! -f "$pub_path" ]; then
         echo "Error: $pub_path not found"
-        echo "Run 'just secrets-init-user {{ user }}' first to create the keypair"
+        echo "Run 'just secrets-init-user $user' first to create the keypair"
         exit 1
     fi
 
@@ -1419,7 +1500,7 @@ secrets-edit user:
     key_path="$HOME/.config/agenix/key.txt"
     if [ ! -f "$key_path" ]; then
         echo "Error: Private key not found at $key_path"
-        echo "Restore it from backup or run 'just secrets-init-user {{ user }}' to create a new one"
+        echo "Restore it from backup or run 'just secrets-init-user $user' to create a new one"
         exit 1
     fi
 
@@ -1432,7 +1513,7 @@ secrets-edit user:
         echo '{}' | nix shell nixpkgs#age -c age -r "$pubkey" -o "$secret_file"
     fi
 
-    echo "Opening secrets editor for {{ user }}..."
+    echo "Opening secrets editor for $user..."
     echo "(Decrypting, editing, then re-encrypting)"
 
     # Create temp file for editing

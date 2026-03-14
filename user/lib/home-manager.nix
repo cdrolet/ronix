@@ -184,6 +184,8 @@
         configContext = "home-manager";
         # Effective root for user data directories (wallpaper, secrets, etc.)
         userDataRoot = configLoader.userDataRoot;
+        # Host name for host-specific filtering (e.g. wallpapers)
+        hostName = host;
         # Note: lib is automatically extended with lib.hm in standalone mode!
       };
     };

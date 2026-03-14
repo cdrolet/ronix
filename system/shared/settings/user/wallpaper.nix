@@ -19,6 +19,8 @@
   # Feature 047: userDataRoot = nixConfigRoot/users (mandatory)
   # Passed via extraSpecialArgs from home-manager.nix
   userDataRoot,
+  # Host name for host-specific wallpaper filtering
+  hostName ? null,
   ...
 }: let
   themeLib = import ../../lib/theme.nix { inherit lib pkgs; };
@@ -53,13 +55,20 @@
     );
 
   # First image from committed repo wallpapers/ folder (Nix store path = valid stylix.image)
+  # When host-specific files exist (prefix = hostName), only those are considered —
+  # matching the runtime sync filter so stylix colors reflect the actual displayed wallpaper.
   firstRepoWallpaper =
     if hasWallpapersDir then
       let
         dirContents = builtins.readDir wallpapersSrc;
-        imageNames = lib.naturalSort (lib.attrNames (lib.filterAttrs
+        allImageNames = lib.naturalSort (lib.attrNames (lib.filterAttrs
           (name: type: type == "regular" && lib.any (ext: lib.hasSuffix ext name) imageExts)
           dirContents));
+        hostImageNames =
+          if hostName != null
+          then lib.filter (name: lib.hasPrefix hostName name) allImageNames
+          else [];
+        imageNames = if hostImageNames != [] then hostImageNames else allImageNames;
       in
         if imageNames != []
         then _userDirPath + "/${config.user.name}/wallpapers/${lib.head imageNames}"

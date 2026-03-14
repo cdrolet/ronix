@@ -1,7 +1,7 @@
 # Nix Update - System Configuration Update Tool
 #
 # Purpose: Desktop-launchable TUI menu to manage nix-config
-# Options: full update, home-only update, garbage collect, exit
+# Options: full update, home-only update, clear cache, garbage collect, exit
 #
 # Platform: Cross-platform (macOS, Linux)
 # Linux:    .desktop file with Terminal=true for dock integration
@@ -48,12 +48,13 @@
       printf "  ''${CYAN}│''${RESET}               ''${BOLD}Nix Config — Update Tool''${RESET}                  ''${CYAN}│''${RESET}\n"
       printf "  ''${CYAN}└─────────────────────────────────────────────────────────┘''${RESET}\n"
       printf "\n"
-      printf "  ''${BOLD}[1]''${RESET}  Full update      ''${DIM}pull + cache clear + rebuild system & home''${RESET}\n"
-      printf "  ''${BOLD}[2]''${RESET}  Home update      ''${DIM}pull + cache clear + rebuild home only''${RESET}\n"
-      printf "  ''${BOLD}[3]''${RESET}  Garbage collect  ''${DIM}delete old generations''${RESET}\n"
-      printf "  ''${BOLD}[4]''${RESET}  Exit\n"
+      printf "  ''${BOLD}[1]''${RESET}  Full update      ''${DIM}pull + rebuild system & home''${RESET}\n"
+      printf "  ''${BOLD}[2]''${RESET}  Home update      ''${DIM}pull + rebuild home only''${RESET}\n"
+      printf "  ''${BOLD}[3]''${RESET}  Clear cache      ''${DIM}clear nix evaluation cache''${RESET}\n"
+      printf "  ''${BOLD}[4]''${RESET}  Garbage collect  ''${DIM}delete old generations''${RESET}\n"
+      printf "  ''${BOLD}[5]''${RESET}  Exit\n"
       printf "\n"
-      printf "  ''${BOLD}▶ Select [1-4]:''${RESET} "
+      printf "  ''${BOLD}▶ Select [1-5]:''${RESET} "
       read -r choice
 
       case "$choice" in
@@ -61,7 +62,7 @@
           clear
           printf "\n  ''${GREEN}▶ Running full update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          if just fresh-install; then
+          if just install; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
           else
@@ -72,7 +73,7 @@
           clear
           printf "\n  ''${GREEN}▶ Running home update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          if just fresh-install-home; then
+          if just install-home; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
           else
@@ -80,6 +81,17 @@
           fi
           ;;
         3)
+          clear
+          printf "\n  ''${YELLOW}▶ Clearing nix evaluation cache...''${RESET}\n\n"
+          cd "$CONFIG_DIR"
+          if just clean-cache; then
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
+            read -rp "  Press Enter to return to menu..." _
+          else
+            break
+          fi
+          ;;
+        4)
           clear
           printf "\n  ''${YELLOW}▶ Running garbage collection...''${RESET}\n\n"
           cd "$CONFIG_DIR"
@@ -90,11 +102,11 @@
             break
           fi
           ;;
-        4)
+        5)
           exit 0
           ;;
         *)
-          printf "\n  ''${RED}Invalid choice.''${RESET} Please enter 1, 2, 3, or 4.\n"
+          printf "\n  ''${RED}Invalid choice.''${RESET} Please enter 1, 2, 3, 4, or 5.\n"
           sleep 1
           ;;
       esac

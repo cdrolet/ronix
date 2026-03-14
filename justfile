@@ -1049,13 +1049,29 @@ secrets-init-user user:
     # Generate new keypair
     echo "Initializing keypair for user $user..."
     mkdir -p "$(dirname "$key_path")"
-    # Generate key and extract public key
-    nix shell nixpkgs#age -c age-keygen -o "$key_path" 2>&1 | grep "Public key:" | cut -d: -f2 | tr -d ' ' > "$pub_path"
-    echo ""
-    echo "Keypair generated successfully!"
-    echo ""
-    echo "  Public key:  $pub_path (commit this)"
-    echo "  Private key: $key_path (keep secret)"
+    tmp_key="$(mktemp)"
+    nix shell nixpkgs#age -c age-keygen -o "$tmp_key" 2>&1 | grep "Public key:" | cut -d: -f2 | tr -d ' ' > "$pub_path"
+
+    if [ ! -f "$key_path" ]; then
+        mv "$tmp_key" "$key_path"
+        chmod 600 "$key_path"
+        echo ""
+        echo "Keypair generated successfully!"
+        echo ""
+        echo "  Public key:  $pub_path (commit this)"
+        echo "  Private key: $key_path (keep secret)"
+    else
+        echo ""
+        echo "Keypair generated successfully!"
+        echo ""
+        echo "  Public key:  $pub_path (commit this)"
+        echo "  Private key: stored below — copy to $user's machine at $key_path"
+        echo ""
+        echo "--- PRIVATE KEY (store securely, do not share) ---"
+        cat "$tmp_key"
+        echo "--------------------------------------------------"
+        rm -f "$tmp_key"
+    fi
     echo ""
     echo "Distribution options:"
     echo ""

@@ -62,36 +62,27 @@
           printf "\n  ''${GREEN}▶ Running full update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
           if just fresh-install; then
-            printf "\n  ''${GREEN}✓ Done.''${RESET}\n"
-          else
-            printf "\n  ''${RED}✗ Update failed. Check output above.''${RESET}\n"
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
+            read -rp "  Press Enter to return to menu..." _
           fi
-          printf "\n"
-          read -rp "  Press Enter to return to menu..." _
           ;;
         2)
           clear
           printf "\n  ''${GREEN}▶ Running home update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
           if just fresh-install-home; then
-            printf "\n  ''${GREEN}✓ Done.''${RESET}\n"
-          else
-            printf "\n  ''${RED}✗ Update failed. Check output above.''${RESET}\n"
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
+            read -rp "  Press Enter to return to menu..." _
           fi
-          printf "\n"
-          read -rp "  Press Enter to return to menu..." _
           ;;
         3)
           clear
           printf "\n  ''${YELLOW}▶ Running garbage collection...''${RESET}\n\n"
           cd "$CONFIG_DIR"
           if just clean; then
-            printf "\n  ''${GREEN}✓ Done.''${RESET}\n"
-          else
-            printf "\n  ''${RED}✗ Garbage collection failed.''${RESET}\n"
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
+            read -rp "  Press Enter to return to menu..." _
           fi
-          printf "\n"
-          read -rp "  Press Enter to return to menu..." _
           ;;
         4)
           exit 0

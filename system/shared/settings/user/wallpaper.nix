@@ -179,7 +179,22 @@ in {
         _src="${wallpapersSrc}"
         _dst="$HOME/Pictures/wallpapers"
         $DRY_RUN_CMD mkdir -p "$_dst"
-        $DRY_RUN_CMD cp -rf "$_src/." "$_dst/"
+
+        # Host-specific wallpapers: if any file starts with the hostname,
+        # only copy those files. Otherwise copy everything.
+        _hostname=$(hostname -s)
+        _has_host_files=false
+        for _f in "$_src/$_hostname"*; do
+          [ -f "$_f" ] && { _has_host_files=true; break; }
+        done
+
+        if [ "$_has_host_files" = true ]; then
+          for _f in "$_src/$_hostname"*; do
+            [ -f "$_f" ] && $DRY_RUN_CMD cp -f "$_f" "$_dst/"
+          done
+        else
+          $DRY_RUN_CMD cp -rf "$_src/." "$_dst/"
+        fi
       '';
     })
   ];

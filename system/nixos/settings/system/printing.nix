@@ -4,14 +4,20 @@
 # Platform: NixOS (system-level service)
 #
 # Auto-discovered: adding this file is sufficient — no manual imports needed.
-{lib, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   services.printing = {
     enable = lib.mkDefault true;
 
-    # Common printer drivers
-    # Add specific drivers in host config if needed:
-    #   services.printing.drivers = [ pkgs.gutenprint pkgs.hplip ];
-    drivers = lib.mkDefault [];
+    # gutenprint: broad driver set covering most thermal, inkjet, and laser printers.
+    # For thermal printers (ESC/POS), also works as generic text/raster printer.
+    # Add more specific drivers in host config if needed:
+    #   services.printing.drivers = [ pkgs.hplip ];   # HP printers
+    #   services.printing.drivers = [ pkgs.brlaser ]; # Brother laser
+    drivers = lib.mkDefault [pkgs.gutenprint];
   };
 
   # Avahi: enables auto-discovery of network printers (mDNS/Bonjour)

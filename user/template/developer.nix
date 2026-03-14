@@ -79,6 +79,28 @@
       ];
     };
 
+    # Backup configuration (restic + Backblaze B2)
+    # Requires: just secrets-set <user> backup.repository.keyId          "004..."
+    #           just secrets-set <user> backup.repository.applicationKey "..."
+    #           just secrets-set <user> backup.repository.password       "strong passphrase"
+    # backup = {
+    #   repository = {
+    #     bucket   = "my-bucket-name";                   # B2 bucket name (not bucket ID)
+    #     endpoint = "s3.ca-east-006.backblazeb2.com";   # B2 S3-compatible endpoint
+    #     keyId          = "<secret>";                   # applicationKeyId (starts with 004)
+    #     applicationKey = "<secret>";                   # application key secret
+    #     password       = "<secret>";                   # restic encryption passphrase
+    #   };
+    #   schedule = "daily";    # "daily" or "weekly"
+    #   retain = {
+    #     daily   = 7;         # keep last 7 daily snapshots
+    #     weekly  = 4;         # keep last 4 weekly snapshots
+    #     monthly = 6;         # keep last 6 monthly snapshots
+    #   };
+    #   paths   = [];          # extra paths beyond defaults
+    #   exclude = [];          # extra exclude patterns beyond defaults
+    # };
+
     # Style configuration (fonts, theme, wallpaper)
     style = {
       fonts = {

@@ -776,7 +776,8 @@ user-create config_dir="":
     #!/usr/bin/env bash
     set -euo pipefail
 
-    _config_dir="${config_dir:-{{ nix_config_dir }}}"
+    _config_dir="{{ config_dir }}"
+    [ -z "$_config_dir" ] && _config_dir="{{ nix_config_dir }}"
     export NIX_CONFIG_DIR="$_config_dir"
 
     echo "Creating new user..."

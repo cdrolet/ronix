@@ -22,7 +22,7 @@
 
   scriptText = ''
     #!/usr/bin/env bash
-    set -euo pipefail
+    set -uo pipefail
 
     BOLD='\033[1m'
     DIM='\033[2m'
@@ -61,28 +61,37 @@
           clear
           printf "\n  ''${GREEN}▶ Running full update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          just fresh-install
+          if just fresh-install; then
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n"
+          else
+            printf "\n  ''${RED}✗ Update failed. Check output above.''${RESET}\n"
+          fi
           printf "\n"
-          read -rp "  Press Enter to close..." _
-          exit 0
+          read -rp "  Press Enter to return to menu..." _
           ;;
         2)
           clear
           printf "\n  ''${GREEN}▶ Running home update...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          just fresh-install-home
+          if just fresh-install-home; then
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n"
+          else
+            printf "\n  ''${RED}✗ Update failed. Check output above.''${RESET}\n"
+          fi
           printf "\n"
-          read -rp "  Press Enter to close..." _
-          exit 0
+          read -rp "  Press Enter to return to menu..." _
           ;;
         3)
           clear
           printf "\n  ''${YELLOW}▶ Running garbage collection...''${RESET}\n\n"
           cd "$CONFIG_DIR"
-          just clean
+          if just clean; then
+            printf "\n  ''${GREEN}✓ Done.''${RESET}\n"
+          else
+            printf "\n  ''${RED}✗ Garbage collection failed.''${RESET}\n"
+          fi
           printf "\n"
-          read -rp "  Press Enter to close..." _
-          exit 0
+          read -rp "  Press Enter to return to menu..." _
           ;;
         4)
           exit 0

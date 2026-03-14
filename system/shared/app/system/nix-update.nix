@@ -64,6 +64,8 @@
           if just fresh-install; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
+          else
+            break
           fi
           ;;
         2)
@@ -73,6 +75,8 @@
           if just fresh-install-home; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
+          else
+            break
           fi
           ;;
         3)
@@ -82,6 +86,8 @@
           if just clean; then
             printf "\n  ''${GREEN}✓ Done.''${RESET}\n\n"
             read -rp "  Press Enter to return to menu..." _
+          else
+            break
           fi
           ;;
         4)
@@ -93,6 +99,10 @@
           ;;
       esac
     done
+
+    # Reached only on failure — block silently so terminal stays open.
+    # User reads the stacktrace above and closes the window when done.
+    read -rs _ 2>/dev/null || true
   '';
 in {
   # just is a runtime dependency: the script calls `just fresh-install`

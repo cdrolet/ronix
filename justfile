@@ -770,12 +770,17 @@ build-and-push user="" host="":
 # ============================================================================
 # Create a new user interactively
 
-# Usage: just user-create
-user-create:
+# Usage: just user-create [config_dir]
+# config_dir: path to nix config flake (defaults to NIX_CONFIG_DIR or ~/.config/nix-config)
+user-create config_dir="":
     #!/usr/bin/env bash
     set -euo pipefail
 
+    _config_dir="${config_dir:-{{ nix_config_dir }}}"
+    export NIX_CONFIG_DIR="$_config_dir"
+
     echo "Creating new user..."
+    echo "  Config dir: $_config_dir"
     echo ""
 
     # Prompt for username
@@ -785,8 +790,8 @@ user-create:
         exit 1
     fi
 
-    # Create user in nix config flake (mandatory — Feature 047)
-    user_dir="{{ nix_config_dir }}/users/$username"
+    # Create user in nix config flake
+    user_dir="$_config_dir/users/$username"
 
     # Check if user already exists
     if [ -d "$user_dir" ]; then

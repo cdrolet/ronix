@@ -64,6 +64,8 @@ in {
       Description = "Automatic nix-config system update";
       After = ["network-online.target"];
       Wants = ["network-online.target"];
+      # Skip silently if nix-config hasn't been cloned yet (e.g. first boot)
+      ConditionPathExists = configDir;
     };
     Service = {
       Type = "oneshot";

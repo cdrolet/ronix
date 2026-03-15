@@ -443,6 +443,8 @@ install user="" host="":
         fi
         sudo ./result-system/sw/bin/darwin-rebuild activate --flake ".#$USER-$HOST"
     else
+        # Clean up stale avahi PID file to prevent service restart failure
+        sudo rm -f /run/avahi-daemon/pid
         sudo ./result-system/bin/switch-to-configuration switch
     fi
     echo "✓ System activation complete"

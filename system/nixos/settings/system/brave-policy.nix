@@ -1,7 +1,11 @@
 # Brave Browser - System-level Managed Policy
 #
-# Purpose: Write Brave managed policies to /etc/brave/policies/managed/
+# Purpose: Write Brave managed policies to system policy directories.
 #          Linux only reads policies from /etc (not from ~/.config/).
+#
+# NixOS builds Brave from the chromium derivation, so it reads policies
+# from /etc/chromium/policies/managed/ (not /etc/brave/).
+# Both paths are written for compatibility.
 #
 # Policies enforced:
 #   - Disable Brave Rewards, Wallet, VPN
@@ -27,9 +31,18 @@
     ExtensionInstallForcelist =
       map (id: "${id};${chromeWebStoreUrl}") extensions;
   };
+
+  policyJson = builtins.toJSON policy;
 in {
+  # /etc/chromium — NixOS brave package reads from chromium policy path
+  environment.etc."chromium/policies/managed/brave.json" = {
+    text = policyJson;
+    mode = "0644";
+  };
+
+  # /etc/brave — upstream Brave path (fallback)
   environment.etc."brave/policies/managed/brave.json" = {
-    text = builtins.toJSON policy;
+    text = policyJson;
     mode = "0644";
   };
 }

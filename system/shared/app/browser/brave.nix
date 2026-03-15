@@ -30,11 +30,11 @@
 
   # Shared configuration (used by both Linux and Darwin)
   extensions = [
-    {id = "cjpalhdlnbpafiamejdnhcphjbkeiagm";} # uBlock Origin
+    {id = "ddkjiahejlhfcafbddmgiahcphecmpfh";} # uBlock Origin Lite (MV3, uBlock Origin removed from CWS)
     {id = "eimadpbcbfnmbkopoojfekhnkhdbieeh";} # Dark Reader
-    {id = "bgjfeiojhflfhlhjdbfmgjiiceknjlhk";} # JSON Viewer
-    {id = "begnohkofejdniblmofmajpecknbnklo";} # Requestly
-    {id = "iaiomicjabeggjcfkbimgmglanimpnae";} # ModHeader
+    {id = "aimiinbnnkboelefkjlenlgimcabobli";} # JSON Viewer
+    {id = "mdnleldcmiljblolnjhpnblkcekpdkpa";} # Requestly
+    {id = "idgpnmonknjnojddfkpgkljpfnnfcklj";} # ModHeader
     {id = "nngceckbapebfimnlniiiahkandclblb";} # Bitwarden
   ];
 

@@ -16,11 +16,11 @@
   chromeWebStoreUrl = "https://clients2.google.com/service/update2/crx";
 
   extensions = [
-    "cjpalhdlnbpafiamejdnhcphjbkeiagm" # uBlock Origin
+    "ddkjiahejlhfcafbddmgiahcphecmpfh" # uBlock Origin Lite (MV3, uBlock Origin removed from CWS)
     "eimadpbcbfnmbkopoojfekhnkhdbieeh" # Dark Reader
-    "bgjfeiojhflfhlhjdbfmgjiiceknjlhk" # JSON Viewer
-    "begnohkofejdniblmofmajpecknbnklo" # Requestly
-    "iaiomicjabeggjcfkbimgmglanimpnae" # ModHeader
+    "aimiinbnnkboelefkjlenlgimcabobli" # JSON Viewer
+    "mdnleldcmiljblolnjhpnblkcekpdkpa" # Requestly
+    "idgpnmonknjnojddfkpgkljpfnnfcklj" # ModHeader
     "nngceckbapebfimnlniiiahkandclblb" # Bitwarden
   ];
 

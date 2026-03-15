@@ -30,6 +30,10 @@
     BraveVPNDisabled = true;
     ExtensionInstallForcelist =
       map (id: "${id};${chromeWebStoreUrl}") extensions;
+    ExtensionSettings = {
+      "nngceckbapebfimnlniiiahkandclblb" = {toolbar_pin = "force_pinned";}; # Bitwarden
+      "eimadpbcbfnmbkopoojfekhnkhdbieeh" = {toolbar_pin = "force_pinned";}; # Dark Reader
+    };
   };
 
   policyJson = builtins.toJSON policy;

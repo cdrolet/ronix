@@ -81,10 +81,8 @@ in
         inherit extensions commandLineArgs;
       };
 
-      # Linux policies via user-level managed policy file
-      # (programs.chromium.extraOpts only exists at NixOS system level)
-      xdg.configFile."BraveSoftware/Brave-Browser/policies/managed/brave.json".text =
-        policyJson;
+      # Linux policies are enforced via /etc/brave/policies/managed/ (system-level).
+      # See system/nixos/settings/system/brave-policy.nix
 
       xdg.mimeApps.defaultApplications = {
         "text/html" = "brave-browser.desktop";

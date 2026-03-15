@@ -35,7 +35,7 @@
     {id = "bgjfeiojhflfhlhjdbfmgjiiceknjlhk";} # JSON Viewer
     {id = "begnohkofejdniblmofmajpecknbnklo";} # Requestly
     {id = "iaiomicjabeggjcfkbimgmglanimpnae";} # ModHeader
-    {id = "nndknepjnldbmdaqdcipilghnekkbhag";} # Bitwarden
+    {id = "nngceckbapebfimnlniiiahkandclblb";} # Bitwarden
   ];
 
   extraOpts = {

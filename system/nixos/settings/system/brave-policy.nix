@@ -21,7 +21,7 @@
     "bgjfeiojhflfhlhjdbfmgjiiceknjlhk" # JSON Viewer
     "begnohkofejdniblmofmajpecknbnklo" # Requestly
     "iaiomicjabeggjcfkbimgmglanimpnae" # ModHeader
-    "nndknepjnldbmdaqdcipilghnekkbhag" # Bitwarden
+    "nngceckbapebfimnlniiiahkandclblb" # Bitwarden
   ];
 
   policy = {

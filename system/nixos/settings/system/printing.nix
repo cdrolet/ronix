@@ -26,4 +26,9 @@
     nssmdns4 = lib.mkDefault true;
     openFirewall = lib.mkDefault true;
   };
+
+  # Remove stale PID file before avahi starts to prevent startup failure
+  # after a crash or dirty shutdown.
+  systemd.services.avahi-daemon.serviceConfig.ExecStartPre =
+    lib.mkDefault "-${pkgs.coreutils}/bin/rm -f /run/avahi-daemon/pid";
 }

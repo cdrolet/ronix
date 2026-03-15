@@ -40,6 +40,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nur = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # CachyOS kernel (BORE scheduler, LTO, PGO, AMD-optimised)
     # NOTE: intentionally no nixpkgs.follows — version pinning required for binary cache
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";

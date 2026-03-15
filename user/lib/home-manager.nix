@@ -86,9 +86,11 @@
       config.allowUnsupportedSystem = true;
       config.allowBroken = true;
       # App-declared overlays (extracted from user apps)
+      # NUR overlay (provides pkgs.nur.repos.* for Firefox extensions, etc.)
       # Plus workaround for fish test failures on darwin (nixpkgs upstream issue)
       overlays =
         overlaysFromApps
+        ++ lib.optional (inputs ? nur) inputs.nur.overlay
         ++ [
           (final: prev:
             lib.optionalAttrs prev.stdenv.isDarwin {
